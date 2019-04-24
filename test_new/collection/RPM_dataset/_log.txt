@@ -1,0 +1,88 @@
+start test file: RPM_dataset.txt,run at:2019-04-24,21:14:33
+test data: RPM_dataset.txt,rows:14443
+test data : RPM_dataset.txt,has no Negative Points(NP)
+
+PT: 0.9466177386969467	NT: NA	accurate: 0.9466177386969467
+test case: RPM_dataset.txt had finshed module:0
+time test spent :3.518462896347046
+****************************************
+
+PT: 0.9554801634009554	NT: NA	accurate: 0.9554801634009554
+test case: RPM_dataset.txt had finshed module:5
+time test spent :3.45292592048645
+****************************************
+
+PT: 0.8868656096378869	NT: NA	accurate: 0.8868656096378869
+test case: RPM_dataset.txt had finshed module:10
+time test spent :3.283337116241455
+****************************************
+
+PT: 0.9525721802949526	NT: NA	accurate: 0.9525721802949526
+test case: RPM_dataset.txt had finshed module:15
+time test spent :3.79732084274292
+****************************************
+
+PT: 0.9624039327009624	NT: NA	accurate: 0.9624039327009624
+test case: RPM_dataset.txt had finshed module:20
+time test spent :3.3904001712799072
+****************************************
+
+PT: 0.9565187287959566	NT: NA	accurate: 0.9565187287959566
+test case: RPM_dataset.txt had finshed module:25
+time test spent :3.6814892292022705
+****************************************
+
+PT: 0.9608114657619609	NT: NA	accurate: 0.9608114657619609
+test case: RPM_dataset.txt had finshed module:30
+time test spent :3.0572783946990967
+****************************************
+
+PT: 0.9239077753929239	NT: NA	accurate: 0.9239077753929239
+test case: RPM_dataset.txt had finshed module:35
+time test spent :3.215932846069336
+****************************************
+
+PT: 0.9497334348819497	NT: NA	accurate: 0.9497334348819497
+test case: RPM_dataset.txt had finshed module:40
+time test spent :3.127851724624634
+****************************************
+
+PT: 0.9327702000969328	NT: NA	accurate: 0.9327702000969328
+test case: RPM_dataset.txt had finshed module:45
+time test spent :2.6888091564178467
+****************************************
+
+PT: 0.9564494911029564	NT: NA	accurate: 0.9564494911029564
+test case: RPM_dataset.txt had finshed module:50
+time test spent :2.6446590423583984
+****************************************
+
+PT: 0.9462715502319463	NT: NA	accurate: 0.9462715502319463
+test case: RPM_dataset.txt had finshed module:55
+time test spent :2.6356887817382812
+****************************************
+
+PT: 0.9527106556809527	NT: NA	accurate: 0.9527106556809527
+test case: RPM_dataset.txt had finshed module:60
+time test spent :2.837883472442627
+****************************************
+
+PT: 0.9056290244409057	NT: NA	accurate: 0.9056290244409057
+test case: RPM_dataset.txt had finshed module:65
+time test spent :2.5549299716949463
+****************************************
+
+PT: 0.8279443328948279	NT: NA	accurate: 0.8279443328948279
+test case: RPM_dataset.txt had finshed module:70
+time test spent :2.6590850353240967
+****************************************
+
+PT: 0.871010177940871	NT: NA	accurate: 0.871010177940871
+test case: RPM_dataset.txt had finshed module:75
+time test spent :2.3939132690429688
+****************************************
+
+PT: 0.9527106556809527	NT: NA	accurate: 0.9527106556809527
+test case: RPM_dataset.txt had finshed module:D
+time test spent :2.1456234455108643
+****************************************

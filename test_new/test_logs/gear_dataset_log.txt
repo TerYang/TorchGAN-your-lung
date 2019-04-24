@@ -1,0 +1,89 @@
+start test file: gear_dataset.txt,run at:2019-04-24,20:34:47
+start test file: gear_dataset.txt,run at:2019-04-24,20:38:10
+test data: gear_dataset.txt,rows:13885
+test data : gear_dataset.txt,has no Negative Points(NP)
+
+PT: 0.9689593086064098	NT: NA	accurate: 0.9689593086064098
+test case: gear_dataset.txt had finshed module:0
+time test spent :3.1002304553985596
+****************************************
+
+PT: 0.9811307166006482	NT: NA	accurate: 0.9811307166006482
+test case: gear_dataset.txt had finshed module:5
+time test spent :3.408046245574951
+****************************************
+
+PT: 0.8107310046813108	NT: NA	accurate: 0.8107310046813108
+test case: gear_dataset.txt had finshed module:10
+time test spent :3.4548840522766113
+****************************************
+
+PT: 0.9629816348577602	NT: NA	accurate: 0.9629816348577602
+test case: gear_dataset.txt had finshed module:15
+time test spent :3.613290786743164
+****************************************
+
+PT: 0.9770975873244508	NT: NA	accurate: 0.9770975873244508
+test case: gear_dataset.txt had finshed module:20
+time test spent :3.5456066131591797
+****************************************
+
+PT: 0.9736406193734246	NT: NA	accurate: 0.9736406193734246
+test case: gear_dataset.txt had finshed module:25
+time test spent :3.421776533126831
+****************************************
+
+PT: 0.9943824270795822	NT: NA	accurate: 0.9943824270795822
+test case: gear_dataset.txt had finshed module:30
+time test spent :3.3070566654205322
+****************************************
+
+PT: 0.8513503781058697	NT: NA	accurate: 0.8513503781058697
+test case: gear_dataset.txt had finshed module:35
+time test spent :2.8024094104766846
+****************************************
+
+PT: 0.9740727403673028	NT: NA	accurate: 0.9740727403673028
+test case: gear_dataset.txt had finshed module:40
+time test spent :2.5804898738861084
+****************************************
+
+PT: 0.9263233705437522	NT: NA	accurate: 0.9263233705437522
+test case: gear_dataset.txt had finshed module:45
+time test spent :2.5564823150634766
+****************************************
+
+PT: 0.9661505221462009	NT: NA	accurate: 0.9661505221462009
+test case: gear_dataset.txt had finshed module:50
+time test spent :2.591517925262451
+****************************************
+
+PT: 0.9815628375945264	NT: NA	accurate: 0.9815628375945264
+test case: gear_dataset.txt had finshed module:55
+time test spent :2.540886402130127
+****************************************
+
+PT: 0.9841555635577962	NT: NA	accurate: 0.9841555635577962
+test case: gear_dataset.txt had finshed module:60
+time test spent :2.8325657844543457
+****************************************
+
+PT: 0.9601008282319049	NT: NA	accurate: 0.9601008282319049
+test case: gear_dataset.txt had finshed module:65
+time test spent :2.6070566177368164
+****************************************
+
+PT: 0.80756211739287	NT: NA	accurate: 0.80756211739287
+test case: gear_dataset.txt had finshed module:70
+time test spent :2.497894763946533
+****************************************
+
+PT: 0.8499099747929421	NT: NA	accurate: 0.8499099747929421
+test case: gear_dataset.txt had finshed module:75
+time test spent :2.633481502532959
+****************************************
+
+PT: 0.9841555635577962	NT: NA	accurate: 0.9841555635577962
+test case: gear_dataset.txt had finshed module:D
+time test spent :2.876452684402466
+****************************************

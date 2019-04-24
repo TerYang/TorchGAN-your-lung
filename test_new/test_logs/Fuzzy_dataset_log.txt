@@ -1,0 +1,88 @@
+start test file: Fuzzy_dataset.txt,run at:2019-04-24,20:38:10
+test data: Fuzzy_dataset.txt,rows:11997
+test data : Fuzzy_dataset.txt,has no Negative Points(NP)
+
+PT: 0.9473201633741769	NT: NA	accurate: 0.9473201633741769
+test case: Fuzzy_dataset.txt had finshed module:0
+time test spent :1.946345567703247
+****************************************
+
+PT: 0.9679919979994999	NT: NA	accurate: 0.9679919979994999
+test case: Fuzzy_dataset.txt had finshed module:5
+time test spent :1.9564323425292969
+****************************************
+
+PT: 0.7453530049178961	NT: NA	accurate: 0.7453530049178961
+test case: Fuzzy_dataset.txt had finshed module:10
+time test spent :2.1254923343658447
+****************************************
+
+PT: 0.953988497124281	NT: NA	accurate: 0.953988497124281
+test case: Fuzzy_dataset.txt had finshed module:15
+time test spent :2.0336368083953857
+****************************************
+
+PT: 0.950654330249229	NT: NA	accurate: 0.950654330249229
+test case: Fuzzy_dataset.txt had finshed module:20
+time test spent :2.2035024166107178
+****************************************
+
+PT: 0.9474035175460532	NT: NA	accurate: 0.9474035175460532
+test case: Fuzzy_dataset.txt had finshed module:25
+time test spent :2.1164987087249756
+****************************************
+
+PT: 0.9925814787030091	NT: NA	accurate: 0.9925814787030091
+test case: Fuzzy_dataset.txt had finshed module:30
+time test spent :2.0498640537261963
+****************************************
+
+PT: 0.8313745102942403	NT: NA	accurate: 0.8313745102942403
+test case: Fuzzy_dataset.txt had finshed module:35
+time test spent :2.1414437294006348
+****************************************
+
+PT: 0.9719096440776861	NT: NA	accurate: 0.9719096440776861
+test case: Fuzzy_dataset.txt had finshed module:40
+time test spent :2.724553108215332
+****************************************
+
+PT: 0.920896890889389	NT: NA	accurate: 0.920896890889389
+test case: Fuzzy_dataset.txt had finshed module:45
+time test spent :2.9316461086273193
+****************************************
+
+PT: 0.9290655997332666	NT: NA	accurate: 0.9290655997332666
+test case: Fuzzy_dataset.txt had finshed module:50
+time test spent :2.9751951694488525
+****************************************
+
+PT: 0.9774943735933983	NT: NA	accurate: 0.9774943735933983
+test case: Fuzzy_dataset.txt had finshed module:55
+time test spent :3.116806983947754
+****************************************
+
+PT: 0.9816620821872135	NT: NA	accurate: 0.9816620821872135
+test case: Fuzzy_dataset.txt had finshed module:60
+time test spent :3.0415234565734863
+****************************************
+
+PT: 0.9289822455613903	NT: NA	accurate: 0.9289822455613903
+test case: Fuzzy_dataset.txt had finshed module:65
+time test spent :3.1215996742248535
+****************************************
+
+PT: 0.802367258481287	NT: NA	accurate: 0.802367258481287
+test case: Fuzzy_dataset.txt had finshed module:70
+time test spent :2.974653959274292
+****************************************
+
+PT: 0.8184546136534133	NT: NA	accurate: 0.8184546136534133
+test case: Fuzzy_dataset.txt had finshed module:75
+time test spent :2.5629193782806396
+****************************************
+
+PT: 0.9816620821872135	NT: NA	accurate: 0.9816620821872135
+test case: Fuzzy_dataset.txt had finshed module:D
+time test spent :2.9604928493499756
+****************************************

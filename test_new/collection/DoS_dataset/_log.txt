@@ -1,0 +1,88 @@
+start test file: DoS_dataset.txt,run at:2019-04-24,21:14:33
+test data: DoS_dataset.txt,rows:11455
+test data : DoS_dataset.txt,has no Negative Points(NP)
+
+PT: 0.7464862505456132	NT: NA	accurate: 0.7464862505456132
+test case: DoS_dataset.txt had finshed module:0
+time test spent :1.6928508281707764
+****************************************
+
+PT: 0.8399825403753819	NT: NA	accurate: 0.8399825403753819
+test case: DoS_dataset.txt had finshed module:5
+time test spent :1.66032075881958
+****************************************
+
+PT: 0.5947621126145788	NT: NA	accurate: 0.5947621126145788
+test case: DoS_dataset.txt had finshed module:10
+time test spent :1.937568187713623
+****************************************
+
+PT: 0.9342645133129638	NT: NA	accurate: 0.9342645133129638
+test case: DoS_dataset.txt had finshed module:15
+time test spent :2.0374128818511963
+****************************************
+
+PT: 0.7738978611959842	NT: NA	accurate: 0.7738978611959842
+test case: DoS_dataset.txt had finshed module:20
+time test spent :2.149700403213501
+****************************************
+
+PT: 0.7345264076822349	NT: NA	accurate: 0.7345264076822349
+test case: DoS_dataset.txt had finshed module:25
+time test spent :2.2875332832336426
+****************************************
+
+PT: 0.9796595373199476	NT: NA	accurate: 0.9796595373199476
+test case: DoS_dataset.txt had finshed module:30
+time test spent :2.2502694129943848
+****************************************
+
+PT: 0.7571366215626364	NT: NA	accurate: 0.7571366215626364
+test case: DoS_dataset.txt had finshed module:35
+time test spent :2.321104049682617
+****************************************
+
+PT: 0.9736359668267133	NT: NA	accurate: 0.9736359668267133
+test case: DoS_dataset.txt had finshed module:40
+time test spent :2.356435537338257
+****************************************
+
+PT: 0.7594063727629856	NT: NA	accurate: 0.7594063727629856
+test case: DoS_dataset.txt had finshed module:45
+time test spent :2.70824933052063
+****************************************
+
+PT: 0.6886948930597993	NT: NA	accurate: 0.6886948930597993
+test case: DoS_dataset.txt had finshed module:50
+time test spent :3.211897611618042
+****************************************
+
+PT: 0.9216935835879528	NT: NA	accurate: 0.9216935835879528
+test case: DoS_dataset.txt had finshed module:55
+time test spent :3.1316256523132324
+****************************************
+
+PT: 0.9622872108249673	NT: NA	accurate: 0.9622872108249673
+test case: DoS_dataset.txt had finshed module:60
+time test spent :3.2039926052093506
+****************************************
+
+PT: 0.7457005674378001	NT: NA	accurate: 0.7457005674378001
+test case: DoS_dataset.txt had finshed module:65
+time test spent :2.948716163635254
+****************************************
+
+PT: 0.789873417721519	NT: NA	accurate: 0.789873417721519
+test case: DoS_dataset.txt had finshed module:70
+time test spent :2.8482377529144287
+****************************************
+
+PT: 0.6721955477957224	NT: NA	accurate: 0.6721955477957224
+test case: DoS_dataset.txt had finshed module:75
+time test spent :2.6516172885894775
+****************************************
+
+PT: 0.9622872108249673	NT: NA	accurate: 0.9622872108249673
+test case: DoS_dataset.txt had finshed module:D
+time test spent :3.3235015869140625
+****************************************

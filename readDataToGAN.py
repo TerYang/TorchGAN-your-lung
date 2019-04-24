@@ -93,9 +93,6 @@ def testdata(path,mark=None):
     # print('{} has data :ndim:{} dtype:{} shape:{}'.format(file,data.ndim, data.dtype, data.shape))
     print('{} has data shaped:{}'.format(file, data.shape))
     rows = data.shape[0]
-    # print(data[:,-1])
-    # print(data[:,:-1])
-
     start = 0
     end = rows
     row = int(rows // 64)
@@ -175,14 +172,9 @@ def testToGAN(path,mark=None):
         path = os.path.join(path,files[0])
     data1 = pd.read_csv(path, sep=None, header=None, dtype=np.float64, engine='python', encoding='utf-8')#,nrows=64*64*100
     data = data1.values.astype(np.float64)
-    # data = np.reshape(data, (-1, 64, 22))
     file = os.path.basename(path)
-    # print('{} has data :ndim:{} dtype:{} shape:{}'.format(file,data.ndim, data.dtype, data.shape))
     print('{} has data shaped:{}'.format(file, data.shape))
     rows = data.shape[0]
-    # print(data[:,-1])
-    # print(data[:,:-1])
-
     start = 0
     end = rows
     row = int(rows // 64)
@@ -196,25 +188,7 @@ def testToGAN(path,mark=None):
             end = int(row * 64)
     else:
         print('arise error at testToGAN parameter mark')
-    # print('start: {} end: {},row:{}'.format(start,end,row))
 
-    # source_flags = data[start:end,-1].tolist()
-
-    # flags = []
-    # for r in range(row):
-    #     num = 0.
-    #     for item in source_flags[r*64:r*64+64]:
-    #         if item == 1.:
-    #             num = 1.
-    #             break
-    #     flags.append(num)
-    # # print(len(source_flags))
-    # # print(len(flags))
-    # # print(source_flags)
-    # # print(flags)
-    # # print(flags)
-    # # exit()
-    # data = data[start:end,:-1].reshape((-1,64,21))
     data = data[start:end,].reshape((-1,64,21))
 
 
@@ -230,7 +204,46 @@ def testToGAN(path,mark=None):
     print('{} start at:{} acquires data shape{} done read files!!!\n'.format(file, start,data.shape))
     return train_loader#, Variable(TestdataM),Variable(TestLabelM)
 
-    # return row, flags,data
+"""get data to new GAN"""
+
+def testNormal(path, mark=None):
+    files = os.listdir(path)
+    if len(files) > 1:
+        print('dataset address error at testToGAN')
+        return -1
+    else:
+        path = os.path.join(path, files[0])
+    data1 = pd.read_csv(path, sep=None, header=None, dtype=np.float64, engine='python',
+                        encoding='utf-8')  # ,nrows=64*64*100
+    data = data1.values.astype(np.float64)
+    # data = np.reshape(data, (-1, 64, 22))
+    file = os.path.basename(path)
+    # print('{} has data :ndim:{} dtype:{} shape:{}'.format(file,data.ndim, data.dtype, data.shape))
+    print('{} has data shaped:{}'.format(file, data.shape))
+    rows = data.shape[0]
+    # print(data[:,-1])
+    # print(data[:,:-1])
+
+    start = 0
+    end = rows
+    row = int(rows // 64)
+    if mark:
+        if mark == 'test':
+            start = int(((rows * 0.8) // 64) * 64)
+            row = int((rows - start) // 64)
+            end = int(start + ((rows - start) // 64) * 64)
+        elif mark == 'train':
+            row = int((rows * 0.8) // 64)
+            end = int(row * 64)
+    else:
+        print('arise error at testToGAN parameter mark')
+
+    data = data[start:end, ].reshape((-1, 64, 21))
+    # num = data.shape[0]
+    # print('num:',)
+    flag = np.zeros((row,1)).tolist()
+    print('{} start at:{} acquires data shape{},flag numbers:{} done read files!!!\n'.format(file, start,data.shape,len(flag)))
+    return row, flag, data
 # url = '/home/gjj/PycharmProjects/ADA/netsData/hackingData/new_data/DoS_dataset.txt'
 # num,flags,data = testdata(url,'test')
 # count = 0

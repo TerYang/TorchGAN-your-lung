@@ -123,7 +123,7 @@ class GAN(object):
         self.dataset = 'attack_free'
         data = next(iter(self.data_loader ))[0]
 
-        print(data.shape)
+        # print(data.shape)
         # print(lable.shape)
         # print(lable)
         # exit()
@@ -132,6 +132,7 @@ class GAN(object):
         # networks init
         self.G = generator(input_dim=self.z_dim, output_dim=data.shape[1], input_size=self.input_size)
         self.D = discriminator(input_dim=data.shape[1], output_dim=1, input_size=self.input_size)
+        # self.D = discriminator(input_dim=1, output_dim=1, input_size=self.input_size)
         self.G_optimizer = optim.Adam(self.G.parameters(), lr=args.lrG, betas=(args.beta1, args.beta2))
         self.D_optimizer = optim.Adam(self.D.parameters(), lr=args.lrD, betas=(args.beta1, args.beta2))
 
@@ -172,7 +173,7 @@ class GAN(object):
             self.G.train()
             epoch_start_time = time.time()
             # for iter, (x_, _) in enumerate(self.data_loader):
-            for iter, x_,  in enumerate(self.data_loader):
+            for iter, x_, in enumerate(self.data_loader):
                 x_ = x_[0]
                 #print(x_.shape)
                 #exit()
@@ -260,20 +261,27 @@ class GAN(object):
                           self.result_dir + '/' + self.dataset + '/' + self.model_name + '/' + self.model_name + '_epoch%03d' % epoch + '.png')
 
     def save(self):
+        # model.state_dict().keys()
         save_dir = os.path.join(self.save_dir, self.dataset, self.model_name)
 
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-
-        torch.save(self.G.state_dict(), os.path.join(save_dir, self.model_name + '_G.pkl'))#dictionary ['bias', 'weight']
+        # .state_dict()只是把模型所有的参数都以OrderedDict的形式存下来
+        # for key, v in enumerate(pretrained_net):
+        #     print key, v
+        # 通过打印，遍历
+        torch.save(self.G.state_dict(), os.path.join(save_dir, self.model_name + '_G.pkl'))
         torch.save(self.D.state_dict(), os.path.join(save_dir, self.model_name + '_D.pkl'))
-
+        # 保存训练过程所有时间 loss参数
         with open(os.path.join(save_dir, self.model_name + '_history.pkl'), 'wb') as f:
             pickle.dump(self.train_hist, f)
 
     def load(self):
+        """
+        func:用来加载模型参数
+        :return:
+        """
         save_dir = os.path.join(self.save_dir, self.dataset, self.model_name)
-
         self.G.load_state_dict(torch.load(os.path.join(save_dir, self.model_name + '_G.pkl')))
         self.D.load_state_dict(torch.load(os.path.join(save_dir, self.model_name + '_D.pkl')))
 
@@ -281,7 +289,6 @@ class GAN(object):
         save_dir = os.path.join(self.save_dir, self.dataset, self.model_name)
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        #self.G.load_state_dict(torch.load(os.path.join(save_dir, self.model_name + '_{}_G.pkl'.format(epoch))))
-        #self.D.load_state_dict(torch.load(os.path.join(save_dir, self.model_name + '_{}_D.pkl'.format(epoch))))
+        # 保存模型
         torch.save(self.G, os.path.join(save_dir, self.model_name + '_{}_G.pkl'.format(epoch)))#dictionary ['bias', 'weight']
         torch.save(self.D, os.path.join(save_dir, self.model_name + '_{}_D.pkl'.format(epoch)))

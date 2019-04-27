@@ -86,7 +86,13 @@ def new_get_norlmal():
 
 ### get GAN test data  new ###########################################
 def testdata(path,mark=None):
-    data1 = pd.read_csv(path, sep=None, header=None, dtype=np.float64, engine='python', encoding='utf-8')#,nrows=64*64*100
+    """
+    func : read data(attack status records) to train or to validate
+    :param path:
+    :param mark:
+    :return: row(number), flag(label type of list), data(array)
+    """
+    data1 = pd.read_csv(path, sep=None, header=None, dtype=np.float64, engine='python', encoding='utf-8')#,nrows=64*64*100 ,nrows=64*64*1
     data = data1.values.astype(np.float64)
     # data = np.reshape(data, (-1, 64, 22))
     file = os.path.basename(path)
@@ -94,8 +100,8 @@ def testdata(path,mark=None):
     print('{} has data shaped:{}'.format(file, data.shape))
     rows = data.shape[0]
     start = 0
-    end = rows
     row = int(rows // 64)
+    end = row*64
     if mark:
         if mark == 'test':
             start = int(((rows*0.8)//64)*64)
@@ -104,7 +110,8 @@ def testdata(path,mark=None):
         elif mark == 'train':
             row = int((rows*0.8)//64)
             end = int(row * 64)
-    # print('start: {} end: {},row:{}'.format(start,end,row))
+    else:
+        pass
 
     source_flags = data[start:end,-1].tolist()
 
@@ -116,23 +123,24 @@ def testdata(path,mark=None):
                 num = 1.
                 break
         flags.append(num)
-    # print(len(source_flags))
-    # print(len(flags))
-    # print(source_flags)
-    # print(flags)
-    # print(flags)
-    # exit()
-    data = data[start:end,:-1].reshape((-1,64,21))
-    # print(data.shape)
-    # print('{} {}rows {}flag rows  data shape{} done read files!!!\n'.format(os.path.basename(path),row, len(flags),data.shape))
+    try:
+        data = data[start:end,:-1].reshape((-1,64,21))
+    except:
+        print('Error!!! Error!!! file name: {},data shape: {},flags size:{}'.format(file,data.shape,len(flags)))
     print('{} start at:{} acquires lebels shape:{} data shape{} done read files!!!\n'.format(file, start,len(flags),data.shape))
     return row, flags,data
 
 ### get first discriminor data ###########################################
 def getTrainDiscriminor(path=test_addr,mark=None):
+    """
+    func: read attack data to train module such as Discriminator(independently) through multiprocessing
+    :param path:
+    :param mark:
+    :return: flag(label type of list), data(array)
+    """
     files = os.listdir(path)
     lens = len(files)
-    print('operate: {}, data folder have  files'.format(mark,lens))
+    # print('operate: {}, data folder have  files'.format(mark,lens))
     pool = mp.Pool(processes=lens)
 
     file_urls = []
@@ -164,6 +172,12 @@ def getTrainDiscriminor(path=test_addr,mark=None):
 
 """get data to new GAN"""
 def testToGAN(path,mark=None):
+    """
+    func: read normal data to train GAN defined as the Class(new gan code)
+    :param path:
+    :param mark:
+    :return: dataloader
+    """
     files = os.listdir(path)
     if len(files)>1:
         print('dataset address error at testToGAN')
@@ -200,13 +214,17 @@ def testToGAN(path,mark=None):
 
     # Data Loader for easy mini-batch return in training
     train_loader = Data.DataLoader(dataset=TorchDataset, batch_size=BATCH_SIZE, shuffle=True)
-
     print('{} start at:{} acquires data shape{} done read files!!!\n'.format(file, start,data.shape))
     return train_loader#, Variable(TestdataM),Variable(TestLabelM)
 
-"""get data to new GAN"""
-
+"""get data to testing new GAN"""
 def testNormal(path, mark=None):
+    """
+    func:read Normal data to test.py for validating the trained modules
+    :param path:
+    :param mark:
+    :return: row(number), flag(label type of list), data(array)
+    """
     files = os.listdir(path)
     if len(files) > 1:
         print('dataset address error at testToGAN')
@@ -221,9 +239,6 @@ def testNormal(path, mark=None):
     # print('{} has data :ndim:{} dtype:{} shape:{}'.format(file,data.ndim, data.dtype, data.shape))
     print('{} has data shaped:{}'.format(file, data.shape))
     rows = data.shape[0]
-    # print(data[:,-1])
-    # print(data[:,:-1])
-
     start = 0
     end = rows
     row = int(rows // 64)
@@ -244,17 +259,3 @@ def testNormal(path, mark=None):
     flag = np.zeros((row,1)).tolist()
     print('{} start at:{} acquires data shape{},flag numbers:{} done read files!!!\n'.format(file, start,data.shape,len(flag)))
     return row, flag, data
-# url = '/home/gjj/PycharmProjects/ADA/netsData/hackingData/new_data/DoS_dataset.txt'
-# num,flags,data = testdata(url,'test')
-# count = 0
-# for flag in flags:
-#     if flag == 1.:
-#         count +=1
-# print(count)
-
-# getTrainDiscriminor(test_addr,'test')
-# testdata(os.path.join(test_addr,'gear_dataset.txt'))
-
-# new_get_norlmal()
-# get_data()
-# minbatch_test()

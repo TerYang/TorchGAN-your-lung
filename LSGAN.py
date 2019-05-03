@@ -1,19 +1,10 @@
-# -*- coding: utf-8 -*-
-# @Time   : 19-4-22 下午4:03
-# @Author : gjj
-# @contact : adau22@163.com ============================
-# my github:https://github.com/TerYang/              ===
-# all rights reserved                                ===
-# good good study,day day up!!                       ===
-# ======================================================
 import utils, torch, time, os, pickle
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
-from dataloader import dataloader
-import torchvision.transforms
-from torchvision import datasets, transforms
-from readDataToGAN import testToGAN
+# from dataloader import dataloader
+from readDataToGAN import *
+
 
 class generator(nn.Module):
     """
@@ -60,7 +51,6 @@ class generator(nn.Module):
 
         return x
 
-
 class discriminator(nn.Module):
     # Network Architecture is exactly same as in infoGAN (https://arxiv.org/abs/1606.03657)
     # Architecture : (64)4c2s-(128)4c2s_BL-FC1024_BL-FC1_S
@@ -97,7 +87,7 @@ class discriminator(nn.Module):
 
         return x
 
-class GAN(object):
+class LSGAN(object):
     def __init__(self, args):
         # parameters
         self.epoch = args.epoch
@@ -105,7 +95,6 @@ class GAN(object):
         self.batch_size = args.batch_size
         self.save_dir = args.save_dir
         self.result_dir = args.result_dir
-        # self.dataset = args.dataset
         self.dataset = args.dataset
         self.log_dir = args.log_dir
         self.gpu_mode = args.gpu_mode
@@ -120,40 +109,31 @@ class GAN(object):
         """dataset"""
         self.data_loader = testToGAN(self.dataset,'train')
         # 重置dataset
-        self.dataset = 'attack_free_GAN_restart'
+        self.dataset = 'attack_free'
         data = next(iter(self.data_loader ))[0]
-
-        # print(data.shape)
-        # print(lable.shape)
-        # print(lable)
-        # exit()
-
 
         # networks init
         self.G = generator(input_dim=self.z_dim, output_dim=data.shape[1], input_size=self.input_size)
         self.D = discriminator(input_dim=data.shape[1], output_dim=1, input_size=self.input_size)
-        # self.D = discriminator(input_dim=1, output_dim=1, input_size=self.input_size)
         self.G_optimizer = optim.Adam(self.G.parameters(), lr=args.lrG, betas=(args.beta1, args.beta2))
         self.D_optimizer = optim.Adam(self.D.parameters(), lr=args.lrD, betas=(args.beta1, args.beta2))
 
         if self.gpu_mode:
             self.G.cuda()
             self.D.cuda()
-            self.BCE_loss = nn.BCELoss().cuda()
+            self.MSE_loss = nn.MSELoss().cuda()
         else:
-            self.BCE_loss = nn.BCELoss()
+            self.MSE_loss = nn.MSELoss()
 
         print('---------- Networks architecture -------------')
         utils.print_network(self.G)
         utils.print_network(self.D)
         print('-----------------------------------------------')
 
-
         # fixed noise
         self.sample_z_ = torch.rand((self.batch_size, self.z_dim))
         if self.gpu_mode:
             self.sample_z_ = self.sample_z_.cuda()
-
 
     def train(self):
         self.train_hist = {}
@@ -162,26 +142,29 @@ class GAN(object):
         self.train_hist['per_epoch_time'] = []
         self.train_hist['total_time'] = []
 
+        print('train at LSGAN')
         self.y_real_, self.y_fake_ = torch.ones(self.batch_size, 1), torch.zeros(self.batch_size, 1)
         if self.gpu_mode:
             self.y_real_, self.y_fake_ = self.y_real_.cuda(), self.y_fake_.cuda()
 
-        self.D.train()#Sets the module in training mode
+        self.D.train()
         print('training start!!')
         start_time = time.time()
-        stored_url = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free/GAN'
-
-        for epoch in range(80,self.epoch+80):
-            if epoch==80:
-                self.G.load_state_dict(torch.load(os.path.join(stored_url,'GAN_G.pkl')))
-                self.D.load_state_dict(torch.load(os.path.join(stored_url,'GAN_D.pkl')))
+        for epoch in range(self.epoch):
             self.G.train()
+            try:
+                if epoch == 20:
+                    self.G.param_groups[0]['lr'] = 0.00005
+                elif epoch == 40:
+                    self.G.param_groups[0]['lr'] = 0.00001
+            except:
+                print('error arise for param_groups at train part ')
+
             epoch_start_time = time.time()
             # for iter, (x_, _) in enumerate(self.data_loader):
+
             for iter, x_, in enumerate(self.data_loader):
                 x_ = x_[0]
-                #print(x_.shape)
-                #exit()
 
                 if iter == self.data_loader.dataset.__len__() // self.batch_size:
                     break
@@ -194,11 +177,11 @@ class GAN(object):
                 self.D_optimizer.zero_grad()
 
                 D_real = self.D(x_)
-                D_real_loss = self.BCE_loss(D_real, self.y_real_)
+                D_real_loss = self.MSE_loss(D_real, self.y_real_)
 
                 G_ = self.G(z_)
                 D_fake = self.D(G_)
-                D_fake_loss = self.BCE_loss(D_fake, self.y_fake_)
+                D_fake_loss = self.MSE_loss(D_fake, self.y_fake_)
 
                 D_loss = D_real_loss + D_fake_loss
                 self.train_hist['D_loss'].append(D_loss.item())
@@ -211,7 +194,7 @@ class GAN(object):
 
                 G_ = self.G(z_)
                 D_fake = self.D(G_)
-                G_loss = self.BCE_loss(D_fake, self.y_real_)
+                G_loss = self.MSE_loss(D_fake, self.y_real_)
                 self.train_hist['G_loss'].append(G_loss.item())
 
                 G_loss.backward()
@@ -222,18 +205,19 @@ class GAN(object):
                           ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(), G_loss.item()))
 
             self.train_hist['per_epoch_time'].append(time.time() - epoch_start_time)
-            #with torch.no_grad():
-                #self.visualize_results((epoch+1))
-            if epoch %5==0:
+            # with torch.no_grad():
+            #     self.visualize_results((epoch+1))
+            if epoch % 5 == 0:
                 self.load_interval(epoch)
+
         self.train_hist['total_time'].append(time.time() - start_time)
         print("Avg one epoch time: %.2f, total %d epochs time: %.2f" % (np.mean(self.train_hist['per_epoch_time']),
               self.epoch, self.train_hist['total_time'][0]))
         print("Training finish!... save training results")
 
         self.save()
-        #utils.generate_animation(self.result_dir + '/' + self.dataset + '/' + self.model_name + '/' + self.model_name,
-                                 #self.epoch)
+        # utils.generate_animation(self.result_dir + '/' + self.dataset + '/' + self.model_name + '/' + self.model_name,
+        #                          self.epoch)
         utils.loss_plot(self.train_hist, os.path.join(self.save_dir, self.dataset, self.model_name), self.model_name)
 
     def visualize_results(self, epoch, fix=True):
@@ -266,26 +250,19 @@ class GAN(object):
                           self.result_dir + '/' + self.dataset + '/' + self.model_name + '/' + self.model_name + '_epoch%03d' % epoch + '.png')
 
     def save(self):
-        # model.state_dict().keys()
         save_dir = os.path.join(self.save_dir, self.dataset, self.model_name)
 
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        # .state_dict()只是把模型所有的参数都以OrderedDict的形式存下来
-        # for key, v in enumerate(pretrained_net):
-        #     print key, v
-        # 通过打印，遍历
+
         torch.save(self.G.state_dict(), os.path.join(save_dir, self.model_name + '_G.pkl'))
         torch.save(self.D.state_dict(), os.path.join(save_dir, self.model_name + '_D.pkl'))
-        # 保存训练过程所有时间 loss参数
+
         with open(os.path.join(save_dir, self.model_name + '_history.pkl'), 'wb') as f:
             pickle.dump(self.train_hist, f)
 
     def load(self):
-        """
-        func:用来加载模型参数
-        :return:
-        """
+        # 加载参数
         save_dir = os.path.join(self.save_dir, self.dataset, self.model_name)
         self.G.load_state_dict(torch.load(os.path.join(save_dir, self.model_name + '_G.pkl')))
         self.D.load_state_dict(torch.load(os.path.join(save_dir, self.model_name + '_D.pkl')))

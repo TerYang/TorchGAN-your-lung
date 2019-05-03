@@ -8,17 +8,18 @@
 # ======================================================
 import argparse, os, torch
 from GAN import GAN
-# from CGAN import CGAN
-# from LSGAN import LSGAN
+from CGAN import CGAN
+from LSGAN import LSGAN
 # from DRAGAN import DRAGAN
-# from ACGAN import ACGAN
-# from WGAN import WGAN
-# from WGAN_GP import WGAN_GP
+from ACGAN import ACGAN
+from WGAN import WGAN
+from WGAN_GP import WGAN_GP
 # from infoGAN import infoGAN
 # from EBGAN import EBGAN
 # from BEGAN import BEGAN
 
-addr = '/home/gjj/PycharmProjects/ADA/netsData/hackingData/GANdata'
+addr = '/home/gjj/PycharmProjects/ADA/netsData/hackingData/GANdata'#normal data
+# addr = '/home/gjj/PycharmProjects/ADA/netsData/hackingData/new_data'#attack data
 
 
 """parsing and configuration"""
@@ -26,7 +27,7 @@ def parse_args():
     desc = "Pytorch implementation of GAN collections"
     parser = argparse.ArgumentParser(description=desc)
 
-    parser.add_argument('--gan_type', type=str, default='GAN',
+    parser.add_argument('--gan_type', type=str, default='GAN',#'LSGAN',#default='GAN',
                         choices=['GAN', 'CGAN', 'infoGAN', 'ACGAN', 'EBGAN', 'BEGAN', 'WGAN', 'WGAN_GP', 'DRAGAN', 'LSGAN'],
                         help='The type of GAN')
     # parser.add_argument('--dataset', type=str, default='mnist', choices=['mnist', 'fashion-mnist', 'cifar10', 'cifar100', 'svhn', 'stl10', 'lsun-bed'],
@@ -35,7 +36,7 @@ def parse_args():
                         help='The name of dataset')
     parser.add_argument('--split', type=str, default='', help='The split flag for svhn and stl10')
     # parser.add_argument('--epoch', type=int, default=50, help='The number of epochs to run')
-    parser.add_argument('--epoch', type=int, default=80, help='The number of epochs to run')
+    parser.add_argument('--epoch', type=int, default=120, help='The number of epochs to run')
     parser.add_argument('--batch_size', type=int, default=64, help='The size of batch')
     parser.add_argument('--input_size', type=int, default=21, help='The size of input image')
     parser.add_argument('--save_dir', type=str, default='models',
@@ -44,7 +45,7 @@ def parse_args():
     parser.add_argument('--log_dir', type=str, default='logs', help='Directory name to save training logs')
     parser.add_argument('--lrG', type=float, default=0.0002)
     parser.add_argument('--lrD', type=float, default=0.0002)
-    parser.add_argument('--beta1', type=float, default=0.5)
+    parser.add_argument('--beta1', type=float, default=0.05)
     parser.add_argument('--beta2', type=float, default=0.999)
     # parser.add_argument('--gpu_mode', type=bool, default=True)
     parser.add_argument('--gpu_mode', type=bool, default=None)
@@ -95,32 +96,35 @@ def main():
         gan = GAN(args)
     # elif args.gan_type == 'CGAN':
     #     gan = CGAN(args)
-    # elif args.gan_type == 'ACGAN':
-    #     gan = ACGAN(args)
+    elif args.gan_type == 'ACGAN':
+        gan = ACGAN(args)
     # elif args.gan_type == 'infoGAN':
     #     gan = infoGAN(args, SUPERVISED=False)
     # elif args.gan_type == 'EBGAN':
     #     gan = EBGAN(args)
-    # elif args.gan_type == 'WGAN':
-    #     gan = WGAN(args)
-    # elif args.gan_type == 'WGAN_GP':
-    #     gan = WGAN_GP(args)
+    elif args.gan_type == 'WGAN':
+        gan = WGAN(args)
+    elif args.gan_type == 'WGAN_GP':
+        gan = WGAN_GP(args)
     # elif args.gan_type == 'DRAGAN':
     #     gan = DRAGAN(args)
-    # elif args.gan_type == 'LSGAN':
-    #     gan = LSGAN(args)
+    elif args.gan_type == 'LSGAN':
+        gan = LSGAN(args)
     # elif args.gan_type == 'BEGAN':
     #     gan = BEGAN(args)
     else:
         raise Exception("[!] There is no option for " + args.gan_type)
 
         # launch the graph in a session
+
+
+    # return
     gan.train()
     print(" [*] Training finished!")
 
     # visualize learned generator
-    gan.visualize_results(args.epoch)
-    print(" [*] Testing finished!")
+    # gan.visualize_results(args.epoch)
+    # print(" [*] Testing finished!")
 
 if __name__ == '__main__':
     main()

@@ -3,7 +3,7 @@
 # @Author : gjj
 # @contact : adau22@163.com ============================
 # my github:https://github.com/TerYang/              ===
-# all rights reserved                                ===
+# copy from network                                  ===
 # good good study,day day up!!                       ===
 # ======================================================
 import os, gzip, torch
@@ -78,7 +78,7 @@ def print_network(net):
     num_params = 0
     for param in net.parameters():
         num_params += param.numel()
-    print(net)
+    # print(net)
     print('Total number of parameters: %d' % num_params)
 
 def save_images(images, size, image_path):

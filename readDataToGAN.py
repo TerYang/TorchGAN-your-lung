@@ -92,6 +92,7 @@ def testdata(path,mark=None):
     :param mark:
     :return: row(number), flag(label type of list), data(array)
     """
+
     data1 = pd.read_csv(path, sep=None, header=None, dtype=np.float64, engine='python', encoding='utf-8')#,nrows=64*64*100 ,nrows=64*64*1
     data = data1.values.astype(np.float64)
     # data = np.reshape(data, (-1, 64, 22))
@@ -116,18 +117,29 @@ def testdata(path,mark=None):
     source_flags = data[start:end,-1].tolist()
 
     flags = []
-    for r in range(row):
-        num = 0.
-        for item in source_flags[r*64:r*64+64]:
-            if item == 1.:
-                num = 1.
-                break
-        flags.append(num)
+
+    """ solve normal marked as 1"""
+    if 'new_data' in path:#new_data:  attack marked as 1,存在任意個1,即標記爲1
+        for r in range(row):
+            num = 0.
+            for item in source_flags[r*64:r*64+64]:
+                if item == 1.:
+                    num = 1.
+                    break
+            flags.append(num)
+    else:# data :  normal marked as 1,沒有attack即一個0都沒有的情況,就標記爲1,否則,標記爲0
+        for r in range(row):
+            num = 1.
+            for item in source_flags[r*64:r*64+64]:
+                if item == 0.:
+                    num = 0.
+                    break
+            flags.append(num)
     try:
         data = data[start:end,:-1].reshape((-1,64,21))
     except:
         print('Error!!! Error!!! file name: {},data shape: {},flags size:{}'.format(file,data.shape,len(flags)))
-    print('{} start at:{} acquires lebels shape:{} data shape{} done read files!!!\n'.format(file, start,len(flags),data.shape))
+    print('{} start at:{} acquires labels shape:{} data shape{} done read files!!!\n'.format(file, start,len(flags),data.shape))
     return row, flags,data
 
 ### get first discriminor data ###########################################

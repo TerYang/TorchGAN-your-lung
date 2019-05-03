@@ -10,12 +10,14 @@ from torch.autograd import Variable
 from readDataToGAN import *
 from GAN import *
 import re
+from ACGAN import discriminator as ad
 
+# module_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free_begin_at105'
 module_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free'
-# test_addr = "/home/gjj/PycharmProjects/ADA/netsData/hackingData/new_data/"
-test_addr = "/home/gjj/PycharmProjects/ADA/netsData/hackingData/data/"
+# test_addr = "/home/gjj/PycharmProjects/ADA/netsData/hackingData/new_data/"#normal marked R,transfered to 0,attack marked T transfered to 1
+test_addr = "/home/gjj/PycharmProjects/ADA/netsData/hackingData/data/"#normal marked R,transfered to 1,attack marked T transfered to 0
 gan_addr = '/home/gjj/PycharmProjects/ADA/netsData/hackingData/GANdata'
-result_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/tests'
+result_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/tests_data'
 # test for normal and attack data you should change the readfile func named testdata of testNormal ##############
 ################### change above parameters while test on different net and for difference data(attack,normal)####
 
@@ -63,16 +65,37 @@ def test(path, logmark, file, flags, test):
     #     Dnet.load_state_dict(torch.load(path))
     # else:
     #     Dnet = torch.load(path)
+    modulename = ''
+    result = np.empty((2, 1))
     if len(jf):
         Dnet = torch.load(path)
     else:
-        Dnet = discriminator()
-        Dnet.load_state_dict(torch.load(path))
-
+        a = os.path.basename(path)
+        c = os.path.splitext(a)[0]
+        pattern = re.compile(r'.*?(\S+)\_\d*')
+        jj = pattern.findall(c)
+        modulename = jj[0]
+        if jj[0] == 'ACGAN' or 'ACGAN' in jj[0]:
+            Dnet = ad()
+        elif jj[0] == 'GAN':
+            Dnet = discriminator()
+        else:
+            Dnet = discriminator()
+        try:
+            Dnet.load_state_dict(torch.load(path))
+        except:
+            print(path,jf,jj,modulename,'*-'*40)
     # print(type(Dnet))
-
-    Results = Dnet(Test_data)
-    Results = Results.data.numpy()
+    try:
+        Results = Dnet(Test_data)
+        result = Results.data.numpy()
+    except:
+        try:
+            Results, _ =  Dnet(Test_data)
+            result = Results.detach().numpy()
+        except:
+            print('path:',path,'file:',file)
+    Results = result.copy()
     # print('Results.shape:{},type size:{}'.format(Results.shape,type(Results)),Results[0])
     # print(np.shape(Results))
     # print(Results[988:1100,0])
@@ -87,6 +110,7 @@ def test(path, logmark, file, flags, test):
     F1-score：2/(1/P+1/R)
     ROC/AUC：TPR=TP/(TP+FN), FPR=FP/(FP+TN)
     """
+    # print(Results.tolist(),Results.tolist()[0],'*-'*40)
     for flag, pre in list(zip(flags,Results.tolist())):
         # print(flag,pre)
         if flag:
@@ -160,13 +184,33 @@ def test(path, logmark, file, flags, test):
     if not os.path.exists(detail_url):
         os.makedirs(detail_url)
     url_numpy = os.path.join(detail_url,'module_{}.csv'.format(logmark))
-    x = np.concatenate((Results,np.array(flags).reshape((-1,1))),axis=1)
+    try:
+        x = np.concatenate((Results,np.array(flags).reshape((-1,1))),axis=1).astype(np.str)
+    except ValueError:
+        try:
+            x = np.concatenate((Results, np.array(flags[:Results.shape[0]]).reshape((-1, 1))), axis=1).astype(np.str)
+        except:
+            pass
+        # x = np.concatenate((Results.detach().numpy(), np.array(flags).reshape((-1, 1))), axis=1).astype(np.str)
+        writelog('Error at module {} No.{},file name:{},flag shape:{},Results shape:{}'.
+                 format(modulename,logmark,file,len(flags),Results.shape),file)
+    try:
+        x = np.concatenate((np.array(['Results', 'label']).reshape((-1, x.shape[1])), x), axis=0).astype(np.str)
+    except:
+        print('cannt add header(columns) at func test')
+        pass
     np.savetxt(url_numpy,x,delimiter=',',fmt='%s')
 
     return res
 
 
 def getModulesList(modules_path,mark='old-gan'):
+    """
+    func: sort different modules saved at different epoch,sorted name list
+    :param modules_path:
+    :param mark:
+    :return: different module file url(address) saved at different epoch,name list
+    """
     modules = os.listdir(modules_path)
     pattern = re.compile(r'\d+\.?\d*')
     num_seq = []
@@ -336,6 +380,9 @@ def improve_multil_test(path):
     result_url = './{}'.format(file)
     if not os.path.exists(result_url):
         os.makedirs(result_url)
+    else:
+        result_url = result_url + '_t'
+        os.makedirs(result_url)
     os.chdir(result_url)
 
     writelog('start test file: {},run at:{}'.format(file,time.strftime('%Y-%m-%d,%H:%M:%S', time.localtime(time.time()))),file)
@@ -348,13 +395,13 @@ def improve_multil_test(path):
     # lable 中是否出现全1,或者全0的情况
     try:
         t_flag.index(1.)
-        writelog("test data : {}, label 1:".format(file,t_flag.count(1.)), file)
+        writelog("test data : {}, label 1:{}".format(file,t_flag.count(1.)), file)
     except ValueError:
         writelog("test data : {}, has no label 1".format(file), file)
 
     try:
         t_flag.index(0.)
-        writelog("test data : {}, label 0:".format(file,t_flag.count(0.)), file)
+        writelog("test data : {}, label 0:{}".format(file,t_flag.count(0.)), file)
     except ValueError:
         writelog("test data : {}, has no label 0".format(file), file)
     ress = []
@@ -419,21 +466,23 @@ if __name__ == '__main__':
     # pool.map(multitest,test_urls)
     # pool.close()
     # pool.join()
-    ban = 'ACGAN'
+    # ban = 'ACGAN'
+    ban = ''
 
     """test Disciminor"""
-    test_urls = [os.path.join(test_addr, file) for file in os.listdir(test_addr)]
-    file_names = [os.path.splitext(file)[0] for file in os.listdir(test_addr)]
-    test_data = [testdata(test_url) for test_url in test_urls]#if test_url is not 'gear_dataset.txt'
+    test_urls = [os.path.join(test_addr, file) for file in os.listdir(test_addr)]#test data
+    file_names = [os.path.splitext(file)[0] for file in os.listdir(test_addr)]# test data name
+    test_data = [testdata(test_url) for test_url in test_urls]#test data,mark='test'
 
     for root, dirs, files in os.walk(module_path, topdown=None):
         for name in dirs:
             if name == ban:
                 continue
             module_url = os.path.join(root, name)
+
+            # print(module_url)
             # test path and module path renew
             result_url = os.path.join(result_path,name)
-            # print(result_url)
 
             if not os.path.exists(result_url):
                 os.makedirs(result_url)

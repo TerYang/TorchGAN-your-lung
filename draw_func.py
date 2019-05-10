@@ -17,8 +17,8 @@ import seaborn as sns
 
 
 # D_PATH = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/test_new/draw'
-D_PATH = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/tests_new_data'
-thedataset = 'tests_new_data'
+D_PATH = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/tests_data'
+thedataset = 'data'
 result_url = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/draw_pictures'
 
 def draw_func(url,color=None):
@@ -83,6 +83,8 @@ if __name__ == '__main__':
     urls = []
     dires = os.listdir(D_PATH)#modules names
     dires = sorted(dires)
+    ban = ['ACGAN', 'ACGAN_continue' , 'GAN', 'LSGAN', 'WGAN', 'WGAN_GP']
+
     for root, dirs, files in os.walk(D_PATH, topdown=None):
         for name in dirs:
             if name == 'collection':
@@ -105,6 +107,9 @@ if __name__ == '__main__':
     if not os.path.exists(path_):
         os.makedirs(path_)
     for filefolder in dires:#tests　目錄下，每一個模型
+        if filefolder in ban:
+            continue
+
         for f in file:
             if filefolder in f:
                 t = plt.figure()

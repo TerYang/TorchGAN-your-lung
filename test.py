@@ -14,20 +14,20 @@ from ACGAN import discriminator as ad
 
 # module_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free_begin_at105'
 module_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free'
-# test_addr = "/home/gjj/PycharmProjects/ADA/netsData/hackingData/new_data/"#normal marked R,transfered to 0,attack marked T transfered to 1
-test_addr = "/home/gjj/PycharmProjects/ADA/netsData/hackingData/data/"#normal marked R,transfered to 1,attack marked T transfered to 0
+test_addr = "/home/gjj/PycharmProjects/ADA/netsData/hackingData/new_data/"#normal marked R,transfered to 0,attack marked T transfered to 1
+# test_addr = "/home/gjj/PycharmProjects/ADA/netsData/hackingData/data/"#normal marked R,transfered to 1,attack marked T transfered to 0
 gan_addr = '/home/gjj/PycharmProjects/ADA/netsData/hackingData/GANdata'
-result_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/tests_data'
+result_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/tests_new_data'
 # test for normal and attack data you should change the readfile func named testdata of testNormal ##############
 ################### change above parameters while test on different net and for difference data(attack,normal)####
-
+columns_ = ['P','N','F1','accurate','recall','PF','NF']
 
 def writelog(content,url=None):
     # a = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-mind/Nets/full/2019-04-17/test_logs/'
     if url == None:
         print(content)
     else:
-        collect_url = './collection'
+        collect_url = './logs'
         if not os.path.exists(collect_url):
             os.makedirs(collect_url)
         url = os.path.join(collect_url,'{}_log.txt'.format(url))
@@ -377,13 +377,15 @@ def improve_multil_test(path):
 
     # 选择合适的mark
     module_urls, seqs = getModulesList(module_url,mark='new-gan')
-    result_url = './{}'.format(file)
-    if not os.path.exists(result_url):
-        os.makedirs(result_url)
-    else:
-        result_url = result_url + '_t'
-        os.makedirs(result_url)
-    os.chdir(result_url)
+
+    collect_url = './collection'
+    # result_url = './{}'.format(file)
+    # if not os.path.exists(result_url):
+    #     os.makedirs(result_url)
+    # else:
+    #     result_url = result_url + '_t'
+    #     os.makedirs(result_url)
+    # os.chdir(result_url)
 
     writelog('start test file: {},run at:{}'.format(file,time.strftime('%Y-%m-%d,%H:%M:%S', time.localtime(time.time()))),file)
     """检验攻击数据"""
@@ -405,42 +407,55 @@ def improve_multil_test(path):
     except ValueError:
         writelog("test data : {}, has no label 0".format(file), file)
     ress = []
-    f = 0
-    lens = 0
-    names = []
+    # f = 0
+    # lens = 0
+    # names = []
     for i, url in list(zip(seqs,module_urls)):
         # if 'GAN_D.pkl' not in url:
         #     print('dict:',url)
-            tes = test(url, i, file, t_flag, tests)#return dict
-            if f:
-                pass
-            else:
-                lens = len(tes.keys())
-                names = list(tes.keys())
-                f = 1
-            for key, item in tes.items():
-                ress.append(item)
-    ress = np.array(ress).reshape((-1,lens))
+        tes = test(url, i, file, t_flag, tests)#return dict
+        for elem in columns_:
+            # 按照给定的顺序排列
+            ress.append(tes[elem])
+        # if f:
+        #     pass
+        # else:
+        #     lens = len(tes.keys())
+        #     names = list(tes.keys())
+        #     f = 1
+        # for key, item in tes.items():
+        #     ress.append(item)
+
+    ress = np.array(ress).reshape((-1,len(columns_)))
     f = 0
     try:
         ress = np.concatenate((np.array(seqs).reshape((-1,1)).astype(np.str),ress),axis=1)
+    #     add module No.
     except ValueError:
         print('--------------',ress.shape, len(seqs),'--------------------------')
         f = 1
     if not f:
         try:
-            names.insert(0,'\\')
-            ress = np.concatenate((np.array(names).reshape((1,-1)).astype(np.str),ress),axis=0)
+            cols = columns_.copy()
+            cols.insert(0,'\\')
+            ress = np.concatenate((np.array(cols).reshape((1,-1)).astype(np.str),ress),axis=0)
+        #     add the parameter name
         except:
-            print('names',names,'len',len(names))
+            print('names',cols,'len',len(cols))
             print('ress',ress.shape)
+    else:
+        try:
+            ress = np.concatenate((np.array(columns_).reshape((1, -1)).astype(np.str), ress), axis=0)
+            #     add the parameter name
+        except:
+            print('varify', ress.shape, len(seqs), 'is not equal')
 
-    collect_url = './collection'
     if not os.path.exists(collect_url):
         os.makedirs(collect_url)
     csv_url = os.path.join(collect_url,file+'_collection.csv')
     # print(csv_url)
     np.savetxt(csv_url,ress,fmt='%s',delimiter=',',encoding='utf-8')
+    # 保存该GAN在当前数据集下,训练阶段保存的模型
 
 if __name__ == '__main__':
     """
@@ -455,7 +470,8 @@ if __name__ == '__main__':
     # # t_nors, t_anors, tests = get_data(keyword='test')  # ,num=64*rows test_normal,test_anormal
     # test_urls = [os.path.join(test_addr,file) for file in os.listdir(test_addr)]
     #
-    # # print(test_urls)
+    print(test_addr)
+    print(result_path)
     # # exit()
     # # t_num, t_flag, tests = testdata(test_urls[0])  # ,num=64*rows test_normal,test_anormal
     #
@@ -467,7 +483,7 @@ if __name__ == '__main__':
     # pool.close()
     # pool.join()
     # ban = 'ACGAN'
-    ban = ''
+    # ban = ['WGAN','ACGAN','WGAN_GP','LSGAN','GAN','ACGAN_continue']
 
     """test Disciminor"""
     test_urls = [os.path.join(test_addr, file) for file in os.listdir(test_addr)]#test data
@@ -476,14 +492,15 @@ if __name__ == '__main__':
 
     for root, dirs, files in os.walk(module_path, topdown=None):
         for name in dirs:
-            if name == ban:
-                continue
+            # if name in ban:
+            #     continue
             module_url = os.path.join(root, name)
 
             # print(module_url)
+            # continue
             # test path and module path renew
             result_url = os.path.join(result_path,name)
-
+            # result stored at dataset + module name
             if not os.path.exists(result_url):
                 os.makedirs(result_url)
             else:

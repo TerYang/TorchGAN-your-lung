@@ -92,8 +92,11 @@ def testdata(path,mark=None):
     :param mark:
     :return: row(number), flag(label type of list), data(array)
     """
+    if 'pkl' in path:
+        data1 = pd.read_pickle(path,compression='zip')
+    else:
+        data1 = pd.read_csv(path, sep=None, header=None, dtype=np.float64, engine='python', encoding='utf-8')#,nrows=64*64*100 ,nrows=64*64*1
 
-    data1 = pd.read_csv(path, sep=None, header=None, dtype=np.float64, engine='python', encoding='utf-8')#,nrows=64*64*100 ,nrows=64*64*1
     data = data1.values.astype(np.float64)
     # data = np.reshape(data, (-1, 64, 22))
     file = os.path.basename(path)
@@ -150,23 +153,27 @@ def getTrainDiscriminor(path=test_addr,mark=None):
     :param mark:
     :return: flag(label type of list), data(array)
     """
-    files = os.listdir(path)
+    print('data address %s'%path)
+    files = [os.path.join(path,f) for f in os.listdir(path) if 'pkl' in f]
     lens = len(files)
     # print('operate: {}, data folder have  files'.format(mark,lens))
-    pool = mp.Pool(processes=lens)
 
-    file_urls = []
     results = []
-    for i in os.listdir(path):
-        if '.txt' in i:
-            file_urls.append(os.path.join(path,i))
-            # results.append(pool.apply(testdata,(os.path.join(path,i),mark,)))#_async
-            results.append(pool.apply_async(testdata,(os.path.join(path,i),mark,)))#_async
+    if lens==0:
+        files= [os.path.join(path, i) for i in os.listdir(path) if '.txt' in i]
+    pool = mp.Pool(processes=len(files))
+    for i in files:
+        print(i)
+        # results.append(pool.apply(testdata,(os.path.join(path,i),mark,)))#_async
+        results.append(pool.apply_async(testdata, (i, mark,)))  # _async
+
+
     pool.close()
     pool.join()
     # print(len(results),type(results))
     flags = []
     data = []
+    row = 0
     for i,result in enumerate(results):
         # result = result#.get()
         result = result.get()
@@ -178,7 +185,8 @@ def getTrainDiscriminor(path=test_addr,mark=None):
         else:
             flags = result[1]
             data = result[2]
-    print('return data shape:{},labels shape'.format(data.shape,len(flags)))
+        row += result[0]
+    print('return data shape:{},labels shape:{},all rows:{}'.format(data.shape,len(flags),row))
     return flags,data
 
 
@@ -190,43 +198,88 @@ def testToGAN(path,mark=None):
     :param mark:
     :return: dataloader
     """
-    files = os.listdir(path)
-    if len(files)>1:
-        print('dataset address error at testToGAN')
-        return -1
-    else:
-        path = os.path.join(path,files[0])
-    data1 = pd.read_csv(path, sep=None, header=None, dtype=np.float64, engine='python', encoding='utf-8')#,nrows=64*64*100
-    data = data1.values.astype(np.float64)
-    file = os.path.basename(path)
-    print('{} has data shaped:{}'.format(file, data.shape))
-    rows = data.shape[0]
-    start = 0
-    end = rows
-    row = int(rows // 64)
-    if mark:
-        if mark == 'test':
-            start = int(((rows*0.8)//64)*64)
-            row = int((rows-start)//64)
-            end = int(start+((rows-start)//64)*64)
-        elif mark == 'train':
-            row = int((rows*0.8)//64)
-            end = int(row * 64)
-    else:
-        print('arise error at testToGAN parameter mark')
+    # 旧数据
+    # files = os.listdir(path)
+    # if len(files)>1:
+    #     print('dataset address error at testToGAN')
+    #     return -1
+    # else:
+    #     path = os.path.join(path,files[0])
+    # data1 = pd.read_csv(path, sep=None, header=None, dtype=np.float64, engine='python', encoding='utf-8')#,nrows=64*64*100
+    # data = data1.values.astype(np.float64)
+    # file = os.path.basename(path)
+    # print('{} has data shaped:{}'.format(file, data.shape))
+    # rows = data.shape[0]
+    # start = 0
+    # end = rows
+    # row = int(rows // 64)
+    # if mark:
+    #     if mark == 'test':
+    #         start = int(((rows*0.8)//64)*64)
+    #         row = int((rows-start)//64)
+    #         end = int(start+((rows-start)//64)*64)
+    #     elif mark == 'train':
+    #         row = int((rows*0.8)//64)
+    #         end = int(row * 64)
+    # else:
+    #     print('arise error at testToGAN parameter mark')
+    #
+    # data = data[start:end,].reshape((-1,64,21))
+    #
+    #
+    # TraindataM = torch.from_numpy(data).float()    # transform to float torchTensor
+    #
+    # TraindataM = torch.unsqueeze(TraindataM,1)
+    # print(TraindataM.shape)
+    # TorchDataset = Data.TensorDataset(TraindataM)
+    #
+    # # Data Loader for easy mini-batch return in training
+    # train_loader = Data.DataLoader(dataset=TorchDataset, batch_size=BATCH_SIZE, shuffle=True)
+    # print('{} start at:{} acquires data shape{} done read files!!!\n'.format(file, start,data.shape))
+    # return train_loader#, Variable(TestdataM),Variable(TestLabelM)
 
-    data = data[start:end,].reshape((-1,64,21))
+    # 新数据
+    files = [os.path.join(path,f) for f in os.listdir(path) if 'pkl' in f]
+    fl = []
+    for i,f in enumerate(files):
+        data1 = pd.read_pickle(f,compression='zip')
+        data = data1.values.astype(np.float64)
+        # file = os.path.basename(path)
+        rows = data.shape[0]
+        start = 0
+        end = rows
+        row = int(rows // 64)
+        file = os.path.splitext(os.path.basename(f))[0]
+        fl.append(file)
+        if mark:
+            if mark == 'test':
+                start = int(((rows*0.8)//64)*64)
+                row = int((rows-start)//64)
+                end = int(start+((rows-start)//64)*64)
+            elif mark == 'train':
+                row = int((rows*0.8)//64)
+                end = int(row * 64)
+        else:
+            print('arise error at testToGAN parameter mark')
 
+        data = data[start:end, ].reshape((-1, 64, 21))
+        print('{} shaped:{},trunked:{}'.format(file, data1.shape,data.shape))
+        print('{} start at:{} acquires row:{},end:{} done read files!!!\n'.format(file, start, row,end))
 
-    TraindataM = torch.from_numpy(data).float()    # transform to float torchTensor
+        if i:
+            data2 = np.concatenate((data2,data))
+        else:
+            data2 = data[start:end,].reshape((-1,64,21))
+
+    TraindataM = torch.from_numpy(data2).float()    # transform to float torchTensor
 
     TraindataM = torch.unsqueeze(TraindataM,1)
-    print(TraindataM.shape)
+    # print(TraindataM.shape)
     TorchDataset = Data.TensorDataset(TraindataM)
 
     # Data Loader for easy mini-batch return in training
     train_loader = Data.DataLoader(dataset=TorchDataset, batch_size=BATCH_SIZE, shuffle=True)
-    print('{} start at:{} acquires data shape{} done read files!!!\n'.format(file, start,data.shape))
+    print('{},size:{} done read files!!!\n'.format(fl, TraindataM.shape))
     return train_loader#, Variable(TestdataM),Variable(TestLabelM)
 
 """get data to testing new GAN"""

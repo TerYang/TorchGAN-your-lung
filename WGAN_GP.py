@@ -6,6 +6,8 @@ from torch.autograd import grad
 # from dataloader import dataloader
 from nets import *
 from readDataToGAN import *
+from tensorboardX import SummaryWriter
+import json
 
 class WGAN_GP(object):
     def __init__(self, args):
@@ -29,7 +31,7 @@ class WGAN_GP(object):
         # self.data_loader = dataloader(self.dataset, self.input_size, self.batch_size)
         # data = self.data_loader.__iter__().__next__()[0]
         self.data_loader = testToGAN(self.dataset, 'train')
-        self.dataset = 'attack_free'
+        self.dataset = 'trainAgain'
         data = next(iter(self.data_loader ))[0]
 
 
@@ -47,6 +49,8 @@ class WGAN_GP(object):
         utils.print_network(self.G)
         utils.print_network(self.D)
         print('-----------------------------------------------')
+        self.writer = SummaryWriter()#log_dir=log_dir,
+        self.X = 0
 
         # fixed noise
         # self.sample_z_ = torch.rand((self.batch_size, self.z_dim))
@@ -65,7 +69,7 @@ class WGAN_GP(object):
             self.y_real_, self.y_fake_ = self.y_real_.cuda(), self.y_fake_.cuda()
 
         self.D.train()
-        print('training start!!')
+        print('WGAN_GP training start!!,epoch:{},module stored at:{}'.format(self.epoch,self.dataset))
         start_time = time.time()
         for epoch in range(self.epoch):
             self.G.train()
@@ -130,6 +134,12 @@ class WGAN_GP(object):
                 if ((iter + 1) % 100) == 0:
                     print("Epoch: [%2d] [%4d/%4d] D_loss: %.8f, G_loss: %.8f" %
                           ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(), G_loss.item()))
+                    self.writer.add_scalar('G_loss', G_loss.item(), self.X)
+                    # writer.add_scalar('G_loss', -G_loss_D, X)
+                    self.writer.add_scalar('D_loss', D_loss.item(), self.X)
+                    self.writer.add_scalars('cross loss', {'G_loss': D_loss.item(),
+                                                      'D_loss': D_loss.item()}, self.X)
+                    self.X += 1
 
             self.train_hist['per_epoch_time'].append(time.time() - epoch_start_time)
             # with torch.no_grad():
@@ -142,7 +152,16 @@ class WGAN_GP(object):
               self.epoch, self.train_hist['total_time'][0]))
         print("Training finish!... save training results")
 
-        self.save()
+        save_dir = os.path.join(self.save_dir, self.dataset, self.model_name)
+
+        with open(os.path.join(save_dir, self.model_name + '_train_hist.json'), "a") as f:
+            json.dump(self.train_hist, f)
+
+        self.writer.export_scalars_to_json(os.path.join(save_dir, self.model_name + '.json'))
+        self.writer.close()
+        self.load_interval(epoch)
+
+        # self.save()
         # utils.generate_animation(self.result_dir + '/' + self.dataset + '/' + self.model_name + '/' + self.model_name,
         #                          self.epoch)
         utils.loss_plot(self.train_hist, os.path.join(self.save_dir, self.dataset, self.model_name), self.model_name)

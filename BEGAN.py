@@ -98,7 +98,7 @@ class BEGAN(object):
 
         self.data_loader = testToGAN(self.dataset,'train')
         # 重置dataset
-        self.dataset = 'attack_free'
+        self.dataset = 'trainAgain'
         data = next(iter(self.data_loader ))[0]
 
         # networks init
@@ -142,11 +142,11 @@ class BEGAN(object):
         self.D.train()
         print('BEGAN training start!!,data set:{},epoch:{}'.format(self.dataset,self.epoch))
         start_time = time.time()
-        for epoch in range(151,151+self.epoch):
-            if epoch==151:
-                stored_url = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free/BEGAN'
-                self.G = torch.load(os.path.join(stored_url,'BEGAN_150_G.pkl'))
-                self.D = torch.load(os.path.join(stored_url,'BEGAN_150_D.pkl'))
+        for epoch in range(self.epoch):
+            # if epoch==151:
+            #     stored_url = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free/BEGAN'
+            #     self.G = torch.load(os.path.join(stored_url,'BEGAN_150_G.pkl'))
+            #     self.D = torch.load(os.path.join(stored_url,'BEGAN_150_D.pkl'))
             self.G.train()
             epoch_start_time = time.time()
             # for iter, (x_, _) in enumerate(self.data_loader):

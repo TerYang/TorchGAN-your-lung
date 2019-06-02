@@ -13,11 +13,15 @@ import re
 from ACGAN import discriminator as ad
 
 # module_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free_begin_at105'
-module_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free'
-test_addr = "/home/gjj/PycharmProjects/ADA/netsData/hackingData/new_data/"#normal marked R,transfered to 0,attack marked T transfered to 1
+# module_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free'
+module_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/retrain'
+test_addr = '/home/gjj/PycharmProjects/ADA/raw_data/car-hacking-intrusion-dataset/encoding/data'
+#scaler to (-1,1),normal marked R,transfered to 0,attack marked T transfered to 1
+
+# test_addr = "/home/gjj/PycharmProjects/ADA/netsData/hackingData/new_data/"#normal marked R,transfered to 0,attack marked T transfered to 1
 # test_addr = "/home/gjj/PycharmProjects/ADA/netsData/hackingData/data/"#normal marked R,transfered to 1,attack marked T transfered to 0
 gan_addr = '/home/gjj/PycharmProjects/ADA/netsData/hackingData/GANdata'
-result_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/tests_new_data'
+result_path = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/tests_retrain'
 # test for normal and attack data you should change the readfile func named testdata of testNormal ##############
 ################### change above parameters while test on different net and for difference data(attack,normal)####
 columns_ = ['P','N','F1','accurate','recall','PF','NF']
@@ -69,7 +73,9 @@ def test(path, logmark, file, flags, test):
     result = np.empty((2, 1))
     if len(jf):
         Dnet = torch.load(path)
+        # 直接加载模型
     else:
+        # 加载模型后,加载变量
         a = os.path.basename(path)
         c = os.path.splitext(a)[0]
         pattern = re.compile(r'.*?(\S+)\_\d*')
@@ -470,8 +476,9 @@ if __name__ == '__main__':
     # # t_nors, t_anors, tests = get_data(keyword='test')  # ,num=64*rows test_normal,test_anormal
     # test_urls = [os.path.join(test_addr,file) for file in os.listdir(test_addr)]
     #
-    print(test_addr)
-    print(result_path)
+    print('数据集位置:',test_addr)
+    print('结果存放位置:',result_path)
+    print('模型路径:',module_path)
     # # exit()
     # # t_num, t_flag, tests = testdata(test_urls[0])  # ,num=64*rows test_normal,test_anormal
     #
@@ -488,7 +495,7 @@ if __name__ == '__main__':
     """test Disciminor"""
     test_urls = [os.path.join(test_addr, file) for file in os.listdir(test_addr)]#test data
     file_names = [os.path.splitext(file)[0] for file in os.listdir(test_addr)]# test data name
-    test_data = [testdata(test_url) for test_url in test_urls]#test data,mark='test'
+    test_data = [testdata(test_url,mark='test') for test_url in test_urls]#test data,mark='test'
 
     for root, dirs, files in os.walk(module_path, topdown=None):
         for name in dirs:

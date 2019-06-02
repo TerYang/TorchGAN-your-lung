@@ -148,3 +148,11 @@ def initialize_weights(net):
         elif isinstance(m, nn.Linear):
             m.weight.data.normal_(0, 0.02)
             m.bias.data.zero_()
+
+def load_interval(self,epoch):
+        save_dir = os.path.join(self.save_dir, self.dataset, self.model_name)
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        # 保存模型
+        torch.save(self.G, os.path.join(save_dir, self.model_name + '_{}_G.pkl'.format(epoch)))#dictionary ['bias', 'weight']
+        torch.save(self.D, os.path.join(save_dir, self.model_name + '_{}_D.pkl'.format(epoch)))

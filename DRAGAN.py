@@ -96,7 +96,7 @@ class DRAGAN(object):
 
         self.data_loader = testToGAN(self.dataset,'train')
         # 重置dataset
-        self.dataset = 'attack_free'
+        self.dataset = 'trainAgain'
         data = next(iter(self.data_loader ))[0]
 
         # networks init
@@ -141,12 +141,12 @@ class DRAGAN(object):
         print('DRAGAN training start!!,data set:{},epoch:{}'.format(self.dataset,self.epoch))
 
         start_time = time.time()
-        for epoch in range(96,96+self.epoch):
+        for epoch in range(self.epoch):
             epoch_start_time = time.time()
-            if epoch==96:
-                stored_url = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free/DRAGAN'
-                self.G = torch.load(os.path.join(stored_url,'DRAGAN_95_G.pkl'))
-                self.D = torch.load(os.path.join(stored_url,'DRAGAN_95_D.pkl'))
+            # if epoch==96:
+            #     stored_url = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free/DRAGAN'
+            #     self.G = torch.load(os.path.join(stored_url,'DRAGAN_95_G.pkl'))
+            #     self.D = torch.load(os.path.join(stored_url,'DRAGAN_95_D.pkl'))
             self.G.train()
             # for iter, (x_, _) in enumerate(self.data_loader):
             for iter, x_, in enumerate(self.data_loader):
@@ -213,7 +213,7 @@ class DRAGAN(object):
                 G_loss.backward()
                 self.G_optimizer.step()
 
-                if ((iter + 1) % 100) == 0:
+                if ((iter + 1) % 500) == 0:
                     print("Epoch: [%2d] [%4d/%4d] D_loss: %.8f, G_loss: %.8f" %
                           ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(), G_loss.item()))
                     self.writer.add_scalar('G_loss', G_loss.item(), self.X)

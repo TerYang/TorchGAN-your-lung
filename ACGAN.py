@@ -5,9 +5,13 @@ import torch.optim as optim
 # from dataloader import dataloader
 from readDataToGAN import *
 import torch.utils.data as Data
+from tensorboardX import SummaryWriter
+
 
 """使用有標籤的攻擊數據進行訓練,
     new_data
+    reclear->encodingdata
+    addr:'/home/gjj/PycharmProjects/ADA/raw_data/car-hacking-intrusion-dataset/encoding'
 """
 class generator(nn.Module):
     # Network Architecture is exactly same as in infoGAN (https://arxiv.org/abs/1606.03657)
@@ -122,7 +126,7 @@ class ACGAN(object):
         self.data_loader = Data.DataLoader(dataset=TorchDataset, batch_size=BATCH_SIZE, shuffle=True)
 
         # 重置dataset
-        self.dataset = 'attack_free_begin_at105'
+        self.dataset = 'trainAgain'
         data = next(iter(self.data_loader ))[0]
 
         # networks init
@@ -164,6 +168,8 @@ class ACGAN(object):
         self.sample_y_ = torch.zeros((self.sample_num, self.class_num)).scatter_(1, temp_y.type(torch.LongTensor), 1)
         if self.gpu_mode:
             self.sample_z_, self.sample_y_ = self.sample_z_.cuda(), self.sample_y_.cuda()
+        self.writer = SummaryWriter()#log_dir=log_dir,
+        self.X = 0
 
     def train(self):
         self.train_hist = {}
@@ -177,23 +183,25 @@ class ACGAN(object):
             self.y_real_, self.y_fake_ = self.y_real_.cuda(), self.y_fake_.cuda()
 
         self.D.train()
-        print('training start!!')
+        # print('training start!!')
         start_time = time.time()
+        print('ACGAN training start!!,data set:{},epoch:{}'.format(self.dataset,self.epoch))
 
-        stored_url = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free/ACGAN'
+        # stored_url = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free/ACGAN'
         for epoch in range(self.epoch):
-            if epoch==0:
-                self.G = torch.load(os.path.join(stored_url,'ACGAN_105_G.pkl'))
-                self.D = torch.load(os.path.join(stored_url,'ACGAN_105_D.pkl'))
+
+            # if epoch==0:
+            #     self.G = torch.load(os.path.join(stored_url,'ACGAN_105_G.pkl'))
+            #     self.D = torch.load(os.path.join(stored_url,'ACGAN_105_D.pkl'))
             self.G.train()
             epoch_start_time = time.time()
             for iter, (x_, y_) in enumerate(self.data_loader):
-
                 if iter == self.data_loader.dataset.__len__() // self.batch_size:
                     break
-                z_ = torch.rand((self.batch_size, self.z_dim))
+                z_ = torch.randn((self.batch_size, self.z_dim))
                 # y_vec_ = torch.zeros((self.batch_size, self.class_num)).scatter_(1, y_.type(torch.LongTensor).unsqueeze(1), 1)
                 y_vec_ = torch.zeros((self.batch_size, self.class_num)).scatter_(1, y_.type(torch.LongTensor), 1)
+                #标签散布横着放
                 # print('y_vec_.shape:',y_vec_.shape)#torch.Size([64, 2])
                 if self.gpu_mode:
                     x_, z_, y_vec_ = x_.cuda(), z_.cuda(), y_vec_.cuda()
@@ -239,6 +247,12 @@ class ACGAN(object):
                 if ((iter + 1) % 100) == 0:
                     print("Epoch: [%2d] [%4d/%4d] D_loss: %.8f, G_loss: %.8f" %
                           ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(), G_loss.item()))
+                    self.writer.add_scalar('G_loss', G_loss.item(), self.X)
+                    # writer.add_scalar('G_loss', -G_loss_D, X)
+                    self.writer.add_scalar('D_loss', D_loss.item(), self.X)
+                    self.writer.add_scalars('cross loss', {'G_loss': D_loss.item(),
+                                                      'D_loss': D_loss.item()}, self.X)
+                    self.X += 1
             if epoch % 5 == 0:
                 self.load_interval(epoch)
             self.train_hist['per_epoch_time'].append(time.time() - epoch_start_time)
@@ -249,8 +263,22 @@ class ACGAN(object):
         print("Avg one epoch time: %.2f, total %d epochs time: %.2f" % (np.mean(self.train_hist['per_epoch_time']),
                                                                         self.epoch, self.train_hist['total_time'][0]))
         print("Training finish!... save training results")
-
-        self.save()
+        self.writer.close()
+        try:
+            save_dir = os.path.join(self.save_dir, self.dataset, self.model_name)
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            url_ = self.model_name + '_{}_G.pkl'.format(epoch)
+            url__= self.model_name + '_{}_D.pkl'.format(epoch)
+            if url_ in os.listdir(save_dir) and url__ in os.listdir(save_dir):
+                pass
+            else:
+                torch.save(self.G,url_)  # dictionary ['bias', 'weight']
+                torch.save(self.D, os.path.join(save_dir, self.model_name + '_{}_D.pkl'.format(epoch)))
+        except:
+            print('saved as variale,no module')
+            self.load_interval(self.epoch)
+        # self.save()
         # utils.generate_animation(self.result_dir + '/' + self.dataset + '/' + self.model_name + '/' + self.model_name,
         #                          self.epoch)
         utils.loss_plot(self.train_hist, os.path.join(self.save_dir, self.dataset, self.model_name), self.model_name)

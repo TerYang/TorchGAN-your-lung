@@ -142,11 +142,13 @@ class BEGAN(object):
         self.D.train()
         print('BEGAN training start!!,data set:{},epoch:{}'.format(self.dataset,self.epoch))
         start_time = time.time()
-        for epoch in range(self.epoch):
-            # if epoch==151:
-            #     stored_url = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free/BEGAN'
-            #     self.G = torch.load(os.path.join(stored_url,'BEGAN_150_G.pkl'))
-            #     self.D = torch.load(os.path.join(stored_url,'BEGAN_150_D.pkl'))
+        url = os.path.join(self.save_dir, self.dataset, self.model_name)
+
+        for epoch in range(110,self.epoch):
+            if epoch == 110:
+                self.G = torch.load(os.path.join(url,'BEGAN_110_G.pkl'))
+                self.D = torch.load(os.path.join(url,'BEGAN_110_D.pkl'))
+                print('reload success!','*'*40)
             self.G.train()
             epoch_start_time = time.time()
             # for iter, (x_, _) in enumerate(self.data_loader):

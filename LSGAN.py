@@ -102,7 +102,7 @@ class LSGAN(object):
         self.model_name = args.gan_type
         self.input_size = args.input_size
         self.z_dim = 62
-
+        self.model_name = 'LSGAN_advance'
         # load dataset
         # self.data_loader = dataloader(self.dataset, self.input_size, self.batch_size)
         # data = self.data_loader.__iter__().__next__()[0]
@@ -145,26 +145,46 @@ class LSGAN(object):
         self.train_hist['per_epoch_time'] = []
         self.train_hist['total_time'] = []
 
-        print('train at LSGAN')
+        # print('train at LSGAN')
         self.y_real_, self.y_fake_ = torch.ones(self.batch_size, 1), torch.zeros(self.batch_size, 1)
         if self.gpu_mode:
             self.y_real_, self.y_fake_ = self.y_real_.cuda(), self.y_fake_.cuda()
 
         self.D.train()
-        print('LSGAN training start!!,epoch:{},module stored at:{}'.format(self.epoch,self.dataset))
+        print('{} training start!!,epoch:{},module stored at:{}'.format(self.model_name,self.epoch,self.dataset))
         start_time = time.time()
+        # url = os.path.join(self.save_dir, self.dataset, self.model_name)
+
         for epoch in range(self.epoch):
+            # if epoch == 105:
+            #     self.G = torch.load(os.path.join(url,'LSGAN_105_G.pkl'))
+            #     self.D = torch.load(os.path.join(url,'LSGAN_105_D.pkl'))
+            #     print('reload success!','*'*40)
             self.G.train()
             try:
-                if epoch >= 20:
-                    self.G.param_groups[0]['lr'] = 0.00009
+                if epoch >= 15:
+                    self.G_optimizer.param_groups[0]['lr'] = 0.00009
+                    self.D_optimizer.param_groups[0]['lr'] = 0.00009
                 elif epoch >= 40:
-                    self.G.param_groups[0]['lr'] = 0.00001
+                    self.G_optimizer.param_groups[0]['lr'] = 0.00001
+                    self.D_optimizer.param_groups[0]['lr'] = 0.00001
                 elif epoch >= 70:
-                    self.G.param_groups[0]['lr'] = 0.000009
+                    self.G_optimizer.param_groups[0]['lr'] = 0.000009
+                    self.D_optimizer.param_groups[0]['lr'] = 0.000009
                 elif epoch >= 90:
-                    self.G.param_groups[0]['lr'] = 0.000001
+                    self.G_optimizer.param_groups[0]['lr'] = 0.000001
+                    self.D_optimizer.param_groups[0]['lr'] = 0.000001
+                elif epoch >= 110:
+                    self.G_optimizer.param_groups[0]['lr'] = 0.0000001
+                    self.D_optimizer.param_groups[0]['lr'] = 0.0000001
+
             except:
+                # print('1',self.G.__getattribute__)
+                # print('2',self.G._parameters.__class__,self.G._parameters.__getattribute__)
+                # try:
+                #     print('3',self.G.param_groups.keys())
+                # except:
+                #     pass
                 print('error arise for param_groups at train part')
 
             epoch_start_time = time.time()
@@ -209,7 +229,8 @@ class LSGAN(object):
 
                 if ((iter + 1) % 100) == 0:
                     print("Epoch: [%2d] [%4d/%4d] D_loss: %.8f, G_loss: %.8f" %
-                          ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(), G_loss.item()))
+                          ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(), G_loss.item()),end=',')
+                    print('lr:%7f'%self.G_optimizer.param_groups[0]['lr'])
                     self.writer.add_scalar('G_loss', G_loss.item(), self.X)
                     # writer.add_scalar('G_loss', -G_loss_D, X)
                     self.writer.add_scalar('D_loss', D_loss.item(), self.X)

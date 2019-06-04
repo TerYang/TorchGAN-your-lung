@@ -3,7 +3,7 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 from dataloader import dataloader
-from GAN import *
+from nets import *
 from tensorboardX import SummaryWriter
 import json
 

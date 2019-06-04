@@ -8,6 +8,8 @@ from nets import *
 from readDataToGAN import *
 from tensorboardX import SummaryWriter
 import json
+from utils import *
+
 
 class WGAN_GP(object):
     def __init__(self, args):
@@ -53,9 +55,9 @@ class WGAN_GP(object):
         self.X = 0
 
         # fixed noise
-        # self.sample_z_ = torch.rand((self.batch_size, self.z_dim))
-        # if self.gpu_mode:
-        #     self.sample_z_ = self.sample_z_.cuda()
+        self.sample_z_ = torch.rand((self.batch_size, self.z_dim))
+        if self.gpu_mode:
+            self.sample_z_ = self.sample_z_.cuda()
 
     def train(self):
         self.train_hist = {}
@@ -71,7 +73,28 @@ class WGAN_GP(object):
         self.D.train()
         print('WGAN_GP training start!!,epoch:{},module stored at:{}'.format(self.epoch,self.dataset))
         start_time = time.time()
-        for epoch in range(self.epoch):
+        url = os.path.join(self.save_dir, self.dataset, self.model_name)
+
+        # 等间隔调整学习率 StepLR
+        # schedule_G = torch.optim.lr_scheduler.StepLR(self.G_optimizer, 20, gamma=0.1, last_epoch=-1)
+        # schedule_D = torch.optim.lr_scheduler.StepLR(self.D_optimizer, 30, gamma=0.1, last_epoch=-1)
+
+        # 余弦退火调整学习率 CosineAnnealingLR
+        # schedule_D=torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max, eta_min=0, last_epoch=-1)
+
+        # 自适应调整学习率 ReduceLROnPlateau
+        """当验证集的 loss 不再下降时，进行学习率调整；或者监测验证集的 accuracy，
+        当accuracy 不再上升时，则调整学习率。"""
+        # torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=10, verbose=False,
+        # threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-08)
+        # schedule_G = torch.optim.lr_scheduler.ReduceLROnPlateau(self.G_optimizer, mode='min', factor=0.1, patience=10, verbose=False,
+        # threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-08)
+
+        for epoch in range(100,self.epoch):
+            if epoch == 100:
+                self.G = torch.load(os.path.join(url,'WGAN_GP_100_G.pkl'))
+                self.D = torch.load(os.path.join(url,'WGAN_GP_100_D.pkl'))
+                print('reload success!','*'*40)
             self.G.train()
             epoch_start_time = time.time()
             # for iter, (x_, _) in enumerate(self.data_loader):

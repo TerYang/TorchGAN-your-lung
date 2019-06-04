@@ -1,11 +1,24 @@
+# -*- coding: utf-8 -*-
+# @Time   : 19-4-22 下午4:03
+# @Author : gjj
+# @contact : adau22@163.com ============================
+# my github:https://github.com/TerYang/              ===
+# all rights reserved                                ===
+# good good study,day day up!!                       ===
+# ======================================================
 import utils, torch, time, os, pickle
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
-# from dataloader import dataloader
+from dataloader import dataloader
+import torchvision.transforms
+from torchvision import datasets, transforms
+from readDataToGAN import testToGAN
 from readDataToGAN import *
 from tensorboardX import SummaryWriter
 import json
+# from validate import *
+from utils import validate
 
 class generator(nn.Module):
     """
@@ -52,6 +65,7 @@ class generator(nn.Module):
 
         return x
 
+
 class discriminator(nn.Module):
     # Network Architecture is exactly same as in infoGAN (https://arxiv.org/abs/1606.03657)
     # Architecture : (64)4c2s-(128)4c2s_BL-FC1024_BL-FC1_S
@@ -88,7 +102,7 @@ class discriminator(nn.Module):
 
         return x
 
-class LSGAN(object):
+class GAN(object):
     def __init__(self, args):
         # parameters
         self.epoch = args.epoch
@@ -96,45 +110,59 @@ class LSGAN(object):
         self.batch_size = args.batch_size
         self.save_dir = args.save_dir
         self.result_dir = args.result_dir
+        # self.dataset = args.dataset
         self.dataset = args.dataset
         self.log_dir = args.log_dir
         self.gpu_mode = args.gpu_mode
         self.model_name = args.gan_type
         self.input_size = args.input_size
         self.z_dim = 62
-        self.model_name = 'LSGAN_advance'
+
         # load dataset
         # self.data_loader = dataloader(self.dataset, self.input_size, self.batch_size)
         # data = self.data_loader.__iter__().__next__()[0]
 
         """dataset"""
-        self.data_loader = testToGAN(self.dataset,'train')
+        # self.data_loader = testToGAN(self.dataset,'train')
+        self.data_loader = DataloadtoGAN(self.dataset,'train',label=True)
+        self.valdata = DataloadtoGAN(self.dataset,'validate')
         # 重置dataset
-        self.dataset = 'trainAgain'
-        data = next(iter(self.data_loader ))[0]
+        self.dataset = 'trainAgainLR'
+        # data = next(iter(self.data_loader[0]))[0]
+        data = self.data_loader.__iter__().__next__()[0]
+        print('data.shape:',data.shape)
+        # self.model_name = 'GANwithLabel'
 
         # networks init
         self.G = generator(input_dim=self.z_dim, output_dim=data.shape[1], input_size=self.input_size)
         self.D = discriminator(input_dim=data.shape[1], output_dim=1, input_size=self.input_size)
+        # self.D = discriminator(input_dim=1, output_dim=1, input_size=self.input_size)
         self.G_optimizer = optim.Adam(self.G.parameters(), lr=args.lrG, betas=(args.beta1, args.beta2))
         self.D_optimizer = optim.Adam(self.D.parameters(), lr=args.lrD, betas=(args.beta1, args.beta2))
+
+        self.G_scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.G_optimizer, mode='max', factor=0.1, patience=4, verbose=True,
+        threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
+        self.D_scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.D_optimizer, mode='max', factor=0.1, patience=4, verbose=True,
+        threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
 
         if self.gpu_mode:
             self.G.cuda()
             self.D.cuda()
-            self.MSE_loss = nn.MSELoss().cuda()
+            self.BCE_loss = nn.BCELoss().cuda()
         else:
-            self.MSE_loss = nn.MSELoss()
+            self.BCE_loss = nn.BCELoss()
 
         print('---------- Networks architecture -------------')
         utils.print_network(self.G)
         utils.print_network(self.D)
         print('-----------------------------------------------')
 
+
         # fixed noise
         self.sample_z_ = torch.rand((self.batch_size, self.z_dim))
         if self.gpu_mode:
             self.sample_z_ = self.sample_z_.cuda()
+
         self.writer = SummaryWriter()#log_dir=log_dir,
         self.X = 0
 
@@ -145,53 +173,33 @@ class LSGAN(object):
         self.train_hist['per_epoch_time'] = []
         self.train_hist['total_time'] = []
 
-        # print('train at LSGAN')
-        self.y_real_, self.y_fake_ = torch.ones(self.batch_size, 1), torch.zeros(self.batch_size, 1)
+        """正常弄成0,异常弄成1"""
+        # self.y_real_, self.y_fake_ = torch.ones(self.batch_size, 1), torch.zeros(self.batch_size, 1)
+        self.y_real_, self.y_fake_ = torch.zeros(self.batch_size, 1), torch.ones(self.batch_size, 1)
         if self.gpu_mode:
             self.y_real_, self.y_fake_ = self.y_real_.cuda(), self.y_fake_.cuda()
 
-        self.D.train()
+        self.D.train()#Sets the module in training mode
         print('{} training start!!,epoch:{},module stored at:{}'.format(self.model_name,self.epoch,self.dataset))
+
+        # print('training start!!')
         start_time = time.time()
-        # url = os.path.join(self.save_dir, self.dataset, self.model_name)
+        # stored_url = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free/GAN'
+        url = os.path.join(self.save_dir, self.dataset, self.model_name)
 
         for epoch in range(self.epoch):
-            # if epoch == 105:
-            #     self.G = torch.load(os.path.join(url,'LSGAN_105_G.pkl'))
-            #     self.D = torch.load(os.path.join(url,'LSGAN_105_D.pkl'))
+        # for epoch in range(110,self.epoch):
+            # if epoch == 110:
+            #     self.G = torch.load(os.path.join(url,'GAN_110_G.pkl'))
+            #     self.D = torch.load(os.path.join(url,'GAN_110_D.pkl'))
             #     print('reload success!','*'*40)
+            self.D.train()
             self.G.train()
-            try:
-                if epoch >= 15:
-                    self.G_optimizer.param_groups[0]['lr'] = 0.00009
-                    self.D_optimizer.param_groups[0]['lr'] = 0.00009
-                elif epoch >= 40:
-                    self.G_optimizer.param_groups[0]['lr'] = 0.00001
-                    self.D_optimizer.param_groups[0]['lr'] = 0.00001
-                elif epoch >= 70:
-                    self.G_optimizer.param_groups[0]['lr'] = 0.000009
-                    self.D_optimizer.param_groups[0]['lr'] = 0.000009
-                elif epoch >= 90:
-                    self.G_optimizer.param_groups[0]['lr'] = 0.000001
-                    self.D_optimizer.param_groups[0]['lr'] = 0.000001
-                elif epoch >= 110:
-                    self.G_optimizer.param_groups[0]['lr'] = 0.0000001
-                    self.D_optimizer.param_groups[0]['lr'] = 0.0000001
-
-            except:
-                # print('1',self.G.__getattribute__)
-                # print('2',self.G._parameters.__class__,self.G._parameters.__getattribute__)
-                # try:
-                #     print('3',self.G.param_groups.keys())
-                # except:
-                #     pass
-                print('error arise for param_groups at train part')
-
             epoch_start_time = time.time()
-            # for iter, (x_, _) in enumerate(self.data_loader):
-
-            for iter, x_, in enumerate(self.data_loader):
-                x_ = x_[0]
+            for iter, (x_, l_) in enumerate(self.data_loader):
+                # for iter, x_, in enumerate(self.data_loader):
+                #     x_ = x_[0]
+                    #print(x_.shape)
 
                 if iter == self.data_loader.dataset.__len__() // self.batch_size:
                     break
@@ -204,11 +212,12 @@ class LSGAN(object):
                 self.D_optimizer.zero_grad()
 
                 D_real = self.D(x_)
-                D_real_loss = self.MSE_loss(D_real, self.y_real_)
+                # D_real_loss = self.BCE_loss(D_real, self.y_real_)
+                D_real_loss = self.BCE_loss(D_real, l_)
 
                 G_ = self.G(z_)
                 D_fake = self.D(G_)
-                D_fake_loss = self.MSE_loss(D_fake, self.y_fake_)
+                D_fake_loss = self.BCE_loss(D_fake, self.y_fake_)
 
                 D_loss = D_real_loss + D_fake_loss
                 self.train_hist['D_loss'].append(D_loss.item())
@@ -221,7 +230,9 @@ class LSGAN(object):
 
                 G_ = self.G(z_)
                 D_fake = self.D(G_)
-                G_loss = self.MSE_loss(D_fake, self.y_real_)
+
+                # G_loss = self.BCE_loss(D_fake, self.y_real_)
+                G_loss = self.BCE_loss(D_fake, l_)
                 self.train_hist['G_loss'].append(G_loss.item())
 
                 G_loss.backward()
@@ -230,23 +241,35 @@ class LSGAN(object):
                 if ((iter + 1) % 100) == 0:
                     print("Epoch: [%2d] [%4d/%4d] D_loss: %.8f, G_loss: %.8f" %
                           ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(), G_loss.item()),end=',')
-                    print('lr:%7f'%self.G_optimizer.param_groups[0]['lr'])
+                    print('lr_G:%.10f,lr_D:%.10f'%(self.G_optimizer.param_groups[0]['lr'],self.D_optimizer.param_groups[0]['lr']))
                     self.writer.add_scalar('G_loss', G_loss.item(), self.X)
                     # writer.add_scalar('G_loss', -G_loss_D, X)
                     self.writer.add_scalar('D_loss', D_loss.item(), self.X)
                     self.writer.add_scalars('cross loss', {'G_loss': D_loss.item(),
                                                       'D_loss': D_loss.item()}, self.X)
+                    self.X += 1
+
+            # schedule D lr
+            acc_D = validate(self.D,None,self.valdata)#model,dataload,torch.tensor
+            self.D_scheduler.step(acc_D)
+            self.D.train()
+
+            # schedule G lr
+            acc_G = self.validate_G(self.valdata.shape[0])
+            self.G_scheduler.step(acc_G)
+            self.G.train()
 
             self.train_hist['per_epoch_time'].append(time.time() - epoch_start_time)
-            # with torch.no_grad():
-            #     self.visualize_results((epoch+1))
-            if epoch % 5 == 0:
+
+            if epoch %5==0:
                 self.load_interval(epoch)
 
         self.train_hist['total_time'].append(time.time() - start_time)
         print("Avg one epoch time: %.2f, total %d epochs time: %.2f" % (np.mean(self.train_hist['per_epoch_time']),
               self.epoch, self.train_hist['total_time'][0]))
         print("Training finish!... save training results")
+
+
         save_dir = os.path.join(self.save_dir, self.dataset, self.model_name)
 
         with open(os.path.join(save_dir, self.model_name + '_train_hist.json'), "a") as f:
@@ -254,11 +277,12 @@ class LSGAN(object):
 
         self.writer.export_scalars_to_json(os.path.join(save_dir, self.model_name + '.json'))
         self.writer.close()
+
         self.load_interval(epoch)
 
         # self.save()
-        # utils.generate_animation(self.result_dir + '/' + self.dataset + '/' + self.model_name + '/' + self.model_name,
-        #                          self.epoch)
+        #utils.generate_animation(self.result_dir + '/' + self.dataset + '/' + self.model_name + '/' + self.model_name,
+                                 #self.epoch)
         utils.loss_plot(self.train_hist, os.path.join(self.save_dir, self.dataset, self.model_name), self.model_name)
 
     def visualize_results(self, epoch, fix=True):
@@ -291,19 +315,26 @@ class LSGAN(object):
                           self.result_dir + '/' + self.dataset + '/' + self.model_name + '/' + self.model_name + '_epoch%03d' % epoch + '.png')
 
     def save(self):
+        # model.state_dict().keys()
         save_dir = os.path.join(self.save_dir, self.dataset, self.model_name)
 
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-
+        # .state_dict()只是把模型所有的参数都以OrderedDict的形式存下来
+        # for key, v in enumerate(pretrained_net):
+        #     print key, v
+        # 通过打印，遍历
         torch.save(self.G.state_dict(), os.path.join(save_dir, self.model_name + '_G.pkl'))
         torch.save(self.D.state_dict(), os.path.join(save_dir, self.model_name + '_D.pkl'))
-
+        # 保存训练过程所有时间 loss参数
         with open(os.path.join(save_dir, self.model_name + '_history.pkl'), 'wb') as f:
             pickle.dump(self.train_hist, f)
 
     def load(self):
-        # 加载参数
+        """
+        func:用来加载模型参数
+        :return:
+        """
         save_dir = os.path.join(self.save_dir, self.dataset, self.model_name)
         self.G.load_state_dict(torch.load(os.path.join(save_dir, self.model_name + '_G.pkl')))
         self.D.load_state_dict(torch.load(os.path.join(save_dir, self.model_name + '_D.pkl')))
@@ -315,3 +346,28 @@ class LSGAN(object):
         # 保存模型
         torch.save(self.G, os.path.join(save_dir, self.model_name + '_{}_G.pkl'.format(epoch)))#dictionary ['bias', 'weight']
         torch.save(self.D, os.path.join(save_dir, self.model_name + '_{}_D.pkl'.format(epoch)))
+
+    def validate_G(self,size):
+        # schedule G lr
+        self.G.eval()
+        acc_G = 0
+        sum_all = 0
+        for i in range(size // 64):
+            z_ = torch.rand((self.batch_size, self.z_dim))
+            if self.gpu_mode:
+                x_, z_ = x_.cuda(), z_.cuda()
+            G_ = self.G(z_)
+            # print('G_.shape:', G_.shape)
+            D_fake = self.D(G_)
+            # print(D_fake.__class__)
+            D_fake = np.squeeze(D_fake.data.numpy(), axis=1)
+            # D_fake = D_fake.tolist()
+            f = lambda x: 1 if x > 0.5 else 0
+            ll = list(map(f, D_fake.tolist()))
+            acc_G += ll.count(1)
+            sum_all += len(ll)
+        zeros = sum_all - acc_G
+        ones = acc_G
+        print('validate size:%d,zeros:%d,ones:%d' % (sum_all, zeros, ones), end=',')
+        print('acc:%.6f,judged as 1.' % (ones / sum_all))
+        return ones / sum_all

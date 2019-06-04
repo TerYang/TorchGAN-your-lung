@@ -13,9 +13,10 @@ import torch.optim as optim
 from dataloader import dataloader
 import torchvision.transforms
 from torchvision import datasets, transforms
-from readDataToGAN import testToGAN
+from readDataToGAN import *
 from tensorboardX import SummaryWriter
 import json
+from utils import *
 
 class generator(nn.Module):
     """
@@ -36,18 +37,18 @@ class generator(nn.Module):
 
         self.fc = nn.Sequential(
             nn.Linear(self.input_dim, 1024),
-            nn.BatchNorm1d(1024),
+            # nn.BatchNorm1d(1024),
             nn.ReLU(),
             nn.Linear(1024, 64 * (8 * 4)),
-            nn.BatchNorm1d(64 * (8 * 4)),
+            # nn.BatchNorm1d(64 * (8 * 4)),
             nn.ReLU(),
         )
         self.deconv = nn.Sequential(
             nn.ConvTranspose2d(64, 32, (4,2), 2, 1),
-            nn.BatchNorm2d(32),
+            # nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.ConvTranspose2d(32, 16, (4,3), 2, 1),
-            nn.BatchNorm2d(16),
+            # nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.ConvTranspose2d(16, self.output_dim, (4,3), 2, 1),
             nn.Tanh(),
@@ -120,23 +121,26 @@ class GAN(object):
         # data = self.data_loader.__iter__().__next__()[0]
 
         """dataset"""
-        self.data_loader = testToGAN(self.dataset,'train')
+        # self.data_loader = testToGAN(self.dataset,'train')
+        self.data_loader = DataloadtoGAN(self.dataset,'train')
+        self.valdata = DataloadtoGAN(self.dataset,'validate')
         # 重置dataset
-        self.dataset = 'trainAgain'
+        self.dataset = 'trainAgainLR'
         data = next(iter(self.data_loader ))[0]
-
-        # print(data.shape)
-        # print(lable.shape)
-        # print(lable)
-        # exit()
-
+        # print('data.shape:',data.shape)#data.shape: torch.Size([64, 1, 64, 21])
 
         # networks init
         self.G = generator(input_dim=self.z_dim, output_dim=data.shape[1], input_size=self.input_size)
         self.D = discriminator(input_dim=data.shape[1], output_dim=1, input_size=self.input_size)
-        # self.D = discriminator(input_dim=1, output_dim=1, input_size=self.input_size)
+
         self.G_optimizer = optim.Adam(self.G.parameters(), lr=args.lrG, betas=(args.beta1, args.beta2))
         self.D_optimizer = optim.Adam(self.D.parameters(), lr=args.lrD, betas=(args.beta1, args.beta2))
+
+        # lr_scheduler
+        self.G_scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.G_optimizer, mode='max', factor=0.1, patience=4, verbose=True,
+        threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
+        self.D_scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.D_optimizer, mode='max', factor=0.1, patience=4, verbose=True,
+        threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
 
         if self.gpu_mode:
             self.G.cuda()
@@ -176,20 +180,23 @@ class GAN(object):
         # print('training start!!')
         start_time = time.time()
         # stored_url = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free/GAN'
+        # url = os.path.join(self.save_dir, self.dataset, self.model_name)
 
-        # for epoch in range(80,self.epoch+80):
         for epoch in range(self.epoch):
-            # if epoch==80:
-            #     self.G.load_state_dict(torch.load(os.path.join(stored_url,'GAN_G.pkl')))
-            #     self.D.load_state_dict(torch.load(os.path.join(stored_url,'GAN_D.pkl')))
+        # for epoch in range(110,self.epoch):
+
+        #     if epoch == 0:
+        #         self.G = torch.load(os.path.join(url,'GAN_110_G.pkl'))
+        #         self.D = torch.load(os.path.join(url,'GAN_110_D.pkl'))
+        #         print('reload success!','*'*40)
+
             self.G.train()
+            self.D.train()
+
             epoch_start_time = time.time()
             # for iter, (x_, _) in enumerate(self.data_loader):
             for iter, x_, in enumerate(self.data_loader):
                 x_ = x_[0]
-                #print(x_.shape)
-                #exit()
-
                 if iter == self.data_loader.dataset.__len__() // self.batch_size:
                     break
 
@@ -226,16 +233,27 @@ class GAN(object):
 
                 if ((iter + 1) % 100) == 0:
                     print("Epoch: [%2d] [%4d/%4d] D_loss: %.8f, G_loss: %.8f" %
-                          ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(), G_loss.item()))
+                          ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(), G_loss.item()),end=',')
+                    print('lr_G:%.10f,lr_D:%.10f'%(self.G_optimizer.param_groups[0]['lr'],self.D_optimizer.param_groups[0]['lr']))
                     self.writer.add_scalar('G_loss', G_loss.item(), self.X)
                     # writer.add_scalar('G_loss', -G_loss_D, X)
                     self.writer.add_scalar('D_loss', D_loss.item(), self.X)
                     self.writer.add_scalars('cross loss', {'G_loss': D_loss.item(),
                                                       'D_loss': D_loss.item()}, self.X)
                     self.X += 1
+
+            # schedule D lr
+            acc_D = validate(self.D,None,self.valdata)#model,dataload,torch.tensor
+            self.D_scheduler.step(acc_D)
+            self.D.train()
+            # schedule G lr
+            acc_G = self.validate_G(self.valdata.shape[0])
+            self.G_scheduler.step(acc_D)
+            self.G.train()
+
+
             self.train_hist['per_epoch_time'].append(time.time() - epoch_start_time)
-            #with torch.no_grad():
-                #self.visualize_results((epoch+1))
+
             if epoch %5==0:
                 self.load_interval(epoch)
         self.train_hist['total_time'].append(time.time() - start_time)
@@ -320,3 +338,28 @@ class GAN(object):
         # 保存模型
         torch.save(self.G, os.path.join(save_dir, self.model_name + '_{}_G.pkl'.format(epoch)))#dictionary ['bias', 'weight']
         torch.save(self.D, os.path.join(save_dir, self.model_name + '_{}_D.pkl'.format(epoch)))
+
+    def validate_G(self,size):
+        # schedule G lr
+        self.G.eval()
+        acc_G = 0
+        sum_all = 0
+        for i in range(size // 64):
+            z_ = torch.rand((self.batch_size, self.z_dim))
+            if self.gpu_mode:
+                x_, z_ = x_.cuda(), z_.cuda()
+            G_ = self.G(z_)
+            # print('G_.shape:', G_.shape)
+            D_fake = self.D(G_)
+            # print(D_fake.__class__)
+            D_fake = np.squeeze(D_fake.data.numpy(), axis=1)
+            # D_fake = D_fake.tolist()
+            f = lambda x: 1 if x > 0.5 else 0
+            ll = list(map(f, D_fake.tolist()))
+            acc_G += ll.count(1)
+            sum_all += len(ll)
+        zeros = sum_all - acc_G
+        ones = acc_G
+        print('validate size:%d,zeros:%d,ones:%d' % (sum_all, zeros, ones), end=',')
+        print('acc:%.6f,judged as 1.' % (ones / sum_all))
+        return ones / sum_all

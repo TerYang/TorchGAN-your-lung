@@ -14,6 +14,21 @@ import imageio
 import matplotlib.pyplot as plt
 from torchvision import datasets, transforms
 
+
+def adjust_learning_rate(optimizer, epoch, val, lr):
+    '''
+    fun:Sets the learning rate to the initial LR decayed by 10 every val epochs
+    :param optimizer: 优化器
+    :param epoch: 当前epoch
+    :param val: epoch 设置间隔
+    :param lr: 初始学习率
+    :return: None
+    '''
+    lr *= 0.1 ** (epoch // val)
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+
 def load_mnist(dataset):
     data_dir = os.path.join("./data", dataset)
 
@@ -72,7 +87,6 @@ def load_celebA(dir, transform, batch_size, shuffle):
     data_loader = torch.utils.data.DataLoader(dset, batch_size, shuffle)
 
     return data_loader
-
 
 def print_network(net):
     num_params = 0
@@ -156,3 +170,137 @@ def load_interval(self,epoch):
         # 保存模型
         torch.save(self.G, os.path.join(save_dir, self.model_name + '_{}_G.pkl'.format(epoch)))#dictionary ['bias', 'weight']
         torch.save(self.D, os.path.join(save_dir, self.model_name + '_{}_D.pkl'.format(epoch)))
+
+def validate(model,data_loader=None,data=None,label=None):#,mark='validate'
+    '''
+    validate at the same time as training
+    func:select data and label or data_loader
+    :return:
+    '''
+    import math
+    f1 = lambda l,r:1 if math.fabs(l-r)<0.5 else 0
+    model.eval()
+    # 为测试
+    if data_loader is not None:
+        ones = 0
+        zeros = 0
+        iter = 0
+        # 默认不带标签的验证集数据都不需要传入data_loader,传入data 就可以
+        flag = 0
+        for iter, x_, in enumerate(data_loader):
+            # 带标签
+            if x_.__len__ == 2:
+                l_ = x_[1]
+                x_ = x_[0]
+                try:
+                    D_real,_ = model(x_)
+                except:
+                    D_real = model(x_)
+
+                # 单通道(1,1,64,21)
+                try:
+                    if l_.size(dim=0) == 1:
+                        l_ = l_.item()
+                        if l_ == 0 or l_ == 0.:
+                            if D_real.item() < 0.5:
+                                ones += 1
+                            else:
+                                zeros += 1
+                        else:
+                            if D_real.item() >= 0.5:
+                                ones += 1
+                            else:
+                                zeros += 1
+                    # 多通道(64,1,64,21)
+                    else:
+                        l_ = l_.data.numpy().tolist()
+                        D_real = D_real.data.numpy().tolist()
+                        ll = list(map(f1, l_, D_real))
+                        zeros += ll.count(0)  # 错误判定
+                        ones += ll.count(1)  # 正确判定
+                except:
+                    print('l_:',l_.__class__,l_.shape)
+
+            # 不带标签,默认数据为normal 数据集,即认为,识别为0,即为识别出正常情况
+            elif x_.__len__ == 1:
+
+                # 没有标签默认为你normal 数据集,不需要标签
+                x_ = x_[0]
+                try:
+                    D_real,_ = model(x_)
+                except:
+                    D_real = model(x_)
+                try:
+                    # 但通道数据
+                    if x_.shape[0]==1:
+                        flag = 1
+                        if D_real.item() <0.5:
+                            zeros+=1
+                        else:
+                            ones += 1
+
+                    # 多通道数据
+                    else:
+                        l_ = l_.data.numpy().tolist()
+                        D_real = D_real.data.numpy().tolist()
+                        ll = list(map(f1, l_, D_real))
+                        zeros += ll.count(0)  # 错误判定
+                        ones += ll.count(1)  # 正确判定
+                except:
+                    print('x_:',x_.shape,x_.__class__)
+        if flag:
+            print('validate: D,size%d,zeros:%d,ones:%d'%(iter+1,zeros,ones),end=',')
+            print('acc:%.6f,judged as 0.' %(zeros/(iter+1)),end=',')
+            return zeros/(iter+1)
+        else:
+            print('validate: D,size%d,errors:%d,correct:%d'%(iter+1,zeros,ones),end=',')
+            print('acc:%.6f,judged as 0.' %(ones/(iter+1)),end=',')
+            return ones/(iter+1)
+    # 正常
+    if data is not None:
+        # 带标签
+        # a = np.empty((3,1))
+        # a.ndim
+        if data.ndim == 4:
+            pass
+        else:
+            TraindataM = torch.from_numpy(data).float()  # transform to float torchTensor
+            data = torch.unsqueeze(TraindataM, 1)
+
+        try:
+            D_real, _ = model(data)
+        except:
+            D_real = model(data)
+
+        # print(D_real.__class__,D_real.shape)#, D_real.item(), D_real[0]
+        # D_real ,= D_real.to_numpy().tolist()
+        # D_real = D_real.data.numpy().tolist()
+
+        # print(label.__class__,label.shape)#, D_real.item(), D_real[0]
+
+        if label is not None:
+            # print(label.__class__,len(label))#, D_real.item(), D_real[0]
+
+            D_real = D_real.data.numpy()
+            D_real = np.squeeze(D_real).tolist()#[[],[],[]]
+
+            ll = list(map(f1, label, D_real))
+            zeros = ll.count(0)  # 错误判定
+            ones = ll.count(1)  # 正确判定
+            print('validate: D,size%d,errors:%d,correct:%d'%(len(ll),zeros,ones),end=',')
+            print('acc:%.6f,judged as 0.'%(ones/len(ll)),end=',')
+            return ones/(len(ll))
+        else:
+            # 验证集没有标,认为是normal 数据集,判定为0~0.5之间即可认为正确
+            D_real = D_real.data.numpy()
+            D_real = np.squeeze(D_real).tolist()#[[],[],[]]
+
+            f = lambda x:1 if x[0] < 0.5 else 0
+            ll = list(map(f,D_real))
+            zeros = ll.count(0)
+            ones = ll.count(1)
+            print('validate D,size:%d,zeros:%d,ones:%d'%(len(D_real),zeros,ones),end=',')
+            print('acc:%.6f,judged as 0' %(ll.count(0)/len(ll)),end=',')
+            return ones/len(ll)
+
+

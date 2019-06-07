@@ -55,10 +55,10 @@ class generator(nn.Module):
         )
         utils.initialize_weights(self)
 
-    def forward(self, input):
-        x = self.fc(input)
+    def forward(self, input_):
+        x = self.fc(input_)
         # x = x.view(-1, 128, (self.input_size // 4), (self.input_size // 4))
-        x = x.view(-1, 64, 8,4)
+        x = x.view(-1, 64, 8, 4)
         x = self.deconv(x)
 
         return x
@@ -92,13 +92,14 @@ class discriminator(nn.Module):
         )
         utils.initialize_weights(self)
 
-    def forward(self, input):
-        x = self.conv(input)
+    def forward(self, input_):
+        x = self.conv(input_)
         # x = x.view(-1, 128 * (self.input_size // 4) * (self.input_size // 4))
         x = x.view(-1, 64 * (8 * 4))
         x = self.fc(x)
 
         return x
+
 
 class GAN(object):
     def __init__(self, args):
@@ -115,6 +116,7 @@ class GAN(object):
         self.model_name = args.gan_type
         self.input_size = args.input_size
         self.z_dim = 62
+        self.train_hist = {}
 
         # load dataset
         # self.data_loader = dataloader(self.dataset, self.input_size, self.batch_size)
@@ -122,11 +124,16 @@ class GAN(object):
 
         """dataset"""
         # self.data_loader = testToGAN(self.dataset,'train')
+        print('-------------------load train dataset--------------------------------------')
         self.data_loader = DataloadtoGAN(self.dataset,'train')
+        print('---------------------------------------------------------------------------')
+        print('-------------------load validate dataset-----------------------------------')
         self.valdata = DataloadtoGAN(self.dataset,'validate')
+        print('---------------------------------------------------------------------------')
+
         # 重置dataset
-        self.dataset = 'trainAgainLR'
-        data = next(iter(self.data_loader ))[0]
+        self.dataset = 'ExponentialLR'
+        data = next(iter(self.data_loader))[0]
         # print('data.shape:',data.shape)#data.shape: torch.Size([64, 1, 64, 21])
 
         # networks init
@@ -137,10 +144,22 @@ class GAN(object):
         self.D_optimizer = optim.Adam(self.D.parameters(), lr=args.lrD, betas=(args.beta1, args.beta2))
 
         # lr_scheduler
-        self.G_scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.G_optimizer, mode='max', factor=0.1, patience=4, verbose=True,
-        threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
-        self.D_scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.D_optimizer, mode='max', factor=0.1, patience=4, verbose=True,
-        threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
+        # self.G_scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.G_optimizer, mode='max', factor=0.1, patience=4, verbose=True, threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
+        # self.D_scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.D_optimizer, mode='max', factor=0.1, patience=4, verbose=True, threshold=0.0001, threshold_mode='rel', cooldown=3, min_lr=0, eps=1e-08)
+
+        # same epoch interval ruduce lr
+        # self.G_scheduler = optim.lr_scheduler.StepLR(self.G_optimizer, 20, gamma=0.1, last_epoch=-1)
+        # self.D_scheduler = optim.lr_scheduler.StepLR(self.D_optimizer, 20, gamma=0.1, last_epoch=-1)
+
+        # ExponentialLR
+        self.G_scheduler = optim.lr_scheduler.ExponentialLR(self.G_optimizer,0.9)
+        self.D_scheduler = optim.lr_scheduler.ExponentialLR(self.D_optimizer,0.9)
+
+        # self.y_real_, self.y_fake_ = torch.ones(self.batch_size, 1), torch.zeros(self.batch_size, 1)
+        self.y_real_, self.y_fake_ = torch.zeros(self.batch_size, 1), torch.ones(self.batch_size, 1)
+
+        if self.gpu_mode:
+            self.y_real_, self.y_fake_ = self.y_real_.cuda(), self.y_fake_.cuda()
 
         if self.gpu_mode:
             self.G.cuda()
@@ -164,18 +183,16 @@ class GAN(object):
         self.X = 0
 
     def train(self):
-        self.train_hist = {}
+
         self.train_hist['D_loss'] = []
         self.train_hist['G_loss'] = []
         self.train_hist['per_epoch_time'] = []
         self.train_hist['total_time'] = []
 
-        self.y_real_, self.y_fake_ = torch.ones(self.batch_size, 1), torch.zeros(self.batch_size, 1)
-        if self.gpu_mode:
-            self.y_real_, self.y_fake_ = self.y_real_.cuda(), self.y_fake_.cuda()
+        # self.D.train()#Sets the module in training mode
 
-        self.D.train()#Sets the module in training mode
-        print('GAN training start!!,epoch:{},module stored at:{}'.format(self.epoch,self.dataset))
+        # print('GAN training start!!,epoch:{},module stored at:{}'.format(self.epoch,self.dataset))
+        self.writelog('GAN training start!!,epoch:{},module stored at:{}'.format(self.epoch,self.dataset))
 
         # print('training start!!')
         start_time = time.time()
@@ -232,9 +249,14 @@ class GAN(object):
                 self.G_optimizer.step()
 
                 if ((iter + 1) % 100) == 0:
-                    print("Epoch: [%2d] [%4d/%4d] D_loss: %.8f, G_loss: %.8f" %
-                          ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(), G_loss.item()),end=',')
-                    print('lr_G:%.10f,lr_D:%.10f'%(self.G_optimizer.param_groups[0]['lr'],self.D_optimizer.param_groups[0]['lr']))
+                    self.writelog("Epoch: [%2d] [%4d/%4d] D_loss: %.8f, G_loss: %.8f,lr_G:%.10f,lr_D:%.10f" %
+                          ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(),
+                           G_loss.item(),self.G_optimizer.param_groups[0]['lr'],self.D_optimizer.param_groups[0]['lr']))
+
+                    # self.writelog("Epoch: [%2d] [%4d/%4d] D_loss: %.8f, G_loss: %.8f" %
+                    #       ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(), G_loss.item()),end=',')
+                    # self.writelog('lr_G:%.10f,lr_D:%.10f'%(self.G_optimizer.param_groups[0]['lr'],self.D_optimizer.param_groups[0]['lr']))
+
                     self.writer.add_scalar('G_loss', G_loss.item(), self.X)
                     # writer.add_scalar('G_loss', -G_loss_D, X)
                     self.writer.add_scalar('D_loss', D_loss.item(), self.X)
@@ -243,24 +265,33 @@ class GAN(object):
                     self.X += 1
 
             # schedule D lr
-            acc_D = validate(self.D,None,self.valdata)#model,dataload,torch.tensor
-            self.D_scheduler.step(acc_D)
-            self.D.train()
-            # schedule G lr
-            acc_G = self.validate_G(self.valdata.shape[0])
-            self.G_scheduler.step(acc_D)
-            self.G.train()
+            acc_D = validate(self.D,None,self.valdata,None)#def validate(model,data_loader=None,data=None,label=None)
 
+            # ReduceLROnPlateau
+            # self.D_scheduler.step(acc_D)
+
+            # reduce by step epoch
+            self.D_scheduler.step(epoch)
+            self.D.cuda()
+            self.D.train()
+
+            # schedule G lr
+            acc_G = self.validate_G(self.valdata.data.numpy().shape[0])
+
+            # ReduceLROnPlateau
+            # self.G_scheduler.step(acc_D)
+            # reduce by step epoch
+            self.G_scheduler.step(epoch)
+            self.G.train()
 
             self.train_hist['per_epoch_time'].append(time.time() - epoch_start_time)
 
-            if epoch %5==0:
+            if epoch % 5 == 0:
                 self.load_interval(epoch)
         self.train_hist['total_time'].append(time.time() - start_time)
-        print("Avg one epoch time: %.2f, total %d epochs time: %.2f" % (np.mean(self.train_hist['per_epoch_time']),
+        self.writelog("Avg one epoch time: %.2f, total %d epochs time: %.2f" % (np.mean(self.train_hist['per_epoch_time']),
               self.epoch, self.train_hist['total_time'][0]))
-        print("Training finish!... save training results")
-
+        self.writelog("Training finish!... save training results")
 
         save_dir = os.path.join(self.save_dir, self.dataset, self.model_name)
 
@@ -339,7 +370,7 @@ class GAN(object):
         torch.save(self.G, os.path.join(save_dir, self.model_name + '_{}_G.pkl'.format(epoch)))#dictionary ['bias', 'weight']
         torch.save(self.D, os.path.join(save_dir, self.model_name + '_{}_D.pkl'.format(epoch)))
 
-    def validate_G(self,size):
+    def validate_G(self, size):
         # schedule G lr
         self.G.eval()
         acc_G = 0
@@ -347,12 +378,13 @@ class GAN(object):
         for i in range(size // 64):
             z_ = torch.rand((self.batch_size, self.z_dim))
             if self.gpu_mode:
-                x_, z_ = x_.cuda(), z_.cuda()
+                # x_, z_ = x_.cuda(), z_.cuda()
+                z_ = z_.cuda()
             G_ = self.G(z_)
             # print('G_.shape:', G_.shape)
             D_fake = self.D(G_)
             # print(D_fake.__class__)
-            D_fake = np.squeeze(D_fake.data.numpy(), axis=1)
+            D_fake = np.squeeze(D_fake.data.cpu().numpy(), axis=1)
             # D_fake = D_fake.tolist()
             f = lambda x: 1 if x > 0.5 else 0
             ll = list(map(f, D_fake.tolist()))
@@ -360,6 +392,15 @@ class GAN(object):
             sum_all += len(ll)
         zeros = sum_all - acc_G
         ones = acc_G
-        print('validate size:%d,zeros:%d,ones:%d' % (sum_all, zeros, ones), end=',')
+        print('G, size:%d,zeros:%d,ones:%d' % (sum_all, zeros, ones), end=',')
         print('acc:%.6f,judged as 1.' % (ones / sum_all))
         return ones / sum_all
+
+    def writelog(self, content):
+        save_dir = os.path.join(os.getcwd(), self.save_dir, self.dataset, self.model_name)
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        save_log = os.path.join(save_dir,'train_records.txt')
+        with open(save_log,'a',encoding='utf-8') as f:
+            f.writelines('\n'+content + '\n')
+            print(content)

@@ -13,6 +13,7 @@ import scipy.misc
 import imageio
 import matplotlib.pyplot as plt
 from torchvision import datasets, transforms
+import torch
 
 
 def adjust_learning_rate(optimizer, epoch, val, lr):
@@ -261,16 +262,31 @@ def validate(model,data_loader=None,data=None,label=None):#,mark='validate'
         # 带标签
         # a = np.empty((3,1))
         # a.ndim
-        if data.ndim == 4:
-            pass
-        else:
-            TraindataM = torch.from_numpy(data).float()  # transform to float torchTensor
-            data = torch.unsqueeze(TraindataM, 1)
+        # model = model.cuda()
+        if data.__class__ == torch.Tensor:
+            if data.data.numpy().ndim == 4:
+                pass
+            elif data.data.numpy().ndim == 3:
+                data = torch.unsqueeze(data, 1)
+        elif data.__class__ == np.ndarray:
+            if data.numpy().ndim == 3:
+                TraindataM = torch.from_numpy(data).float()  # transform to float torchTensor
+                data = torch.unsqueeze(TraindataM, 1)
+            elif data.numpy().ndim == 4:
+                data = torch.from_numpy(data).float()  # transform to float torchTensor
+        # data.cuda()
+        # try:
+        #     D_real, _ = model(data)
+        # except:
 
+        # cup model
+        model = model.cpu()
         try:
-            D_real, _ = model(data)
-        except:
             D_real = model(data)
+        except:
+            # print(data.data.cuda().numpy().shape)
+            print(data.data.numpy().shape)
+
 
         # print(D_real.__class__,D_real.shape)#, D_real.item(), D_real[0]
         # D_real ,= D_real.to_numpy().tolist()
@@ -291,16 +307,18 @@ def validate(model,data_loader=None,data=None,label=None):#,mark='validate'
             print('acc:%.6f,judged as 0.'%(ones/len(ll)),end=',')
             return ones/(len(ll))
         else:
-            # 验证集没有标,认为是normal 数据集,判定为0~0.5之间即可认为正确
+            # 验证集没有标,认为是normal 数据集,判定为0~0.5之间即可认为正确,label 0
+            # D_real = D_real.data.cuda().numpy()
             D_real = D_real.data.numpy()
             D_real = np.squeeze(D_real).tolist()#[[],[],[]]
 
-            f = lambda x:1 if x[0] < 0.5 else 0
-            ll = list(map(f,D_real))
+            # f = lambda x: 1 if x[0] < 0.5 else 0
+            f = lambda x: 0 if x < 0.5 else 1
+            ll = list(map(f, D_real))
             zeros = ll.count(0)
             ones = ll.count(1)
-            print('validate D,size:%d,zeros:%d,ones:%d'%(len(D_real),zeros,ones),end=',')
-            print('acc:%.6f,judged as 0' %(ll.count(0)/len(ll)),end=',')
-            return ones/len(ll)
+            print('validate: D,size:%d,zeros:%d,ones:%d'%(len(ll),zeros,ones),end=',')
+            print('acc:%.6f,judged as 0' % (zeros/len(ll)), end=',')
+            return zeros/len(ll)
 
 

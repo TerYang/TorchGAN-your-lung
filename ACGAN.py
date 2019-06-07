@@ -214,7 +214,6 @@ class ACGAN(object):
 
         # stored_url = '/home/gjj/PycharmProjects/ADA/TorchGAN-your-lung/models/attack_free/ACGAN'
         for epoch in range(self.epoch):
-
             # if epoch==0:
             #     self.G = torch.load(os.path.join(stored_url,'ACGAN_105_G.pkl'))
             #     self.D = torch.load(os.path.join(stored_url,'ACGAN_105_D.pkl'))

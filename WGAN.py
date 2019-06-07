@@ -135,7 +135,9 @@ class WGAN(object):
         self.train_hist['per_epoch_time'] = []
         self.train_hist['total_time'] = []
 
-        self.y_real_, self.y_fake_ = torch.ones(self.batch_size, 1), torch.zeros(self.batch_size, 1)
+        # self.y_real_, self.y_fake_ = torch.ones(self.batch_size, 1), torch.zeros(self.batch_size, 1)
+        self.y_real_, self.y_fake_ = torch.zeros(self.batch_size, 1), torch.ones(self.batch_size, 1)
+        
         if self.gpu_mode:
             self.y_real_, self.y_fake_ = self.y_real_.cuda(), self.y_fake_.cuda()
 
